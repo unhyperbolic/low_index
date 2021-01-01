@@ -97,6 +97,7 @@ public:
         {
             parent_work_info = &root_info;
             root_info.pending_work_infos.push_back(_PendingWorkInfo(root));
+            work_infos = &root_info.pending_work_infos;
         }
         
         _PendingWorkInfo root_info;
@@ -105,6 +106,7 @@ public:
         // parent_work_record->work_records[work_records.size() - 1 - index];
 
         _PendingWorkInfo* parent_work_info;
+        std::vector<_PendingWorkInfo> *work_infos;
         size_t index;
   
         // Interrupted thread needs to set parent_work_record to its own _WorkRecord.
