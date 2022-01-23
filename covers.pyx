@@ -224,39 +224,40 @@ cdef class SimsTree:
             """
 
             def __init__(self, SimsTree tree):
-                self.tree = tree
-                self.node = None # The last node returned
-                self.path = []   # Tree path of the last node returned
+                self.next = tree.root
+                self.path = [0]
+                while self.next.children:
+                    self.path.append(0)
+                    self.next = self.next.children[0]
+                self.done = False
 
             def __next__(self):
-                if not self.node and not self.path:
-                    self.node = self.tree.root
-                    self.path = [0]
-                    while self.node.children:
-                        self.path.append(0)
-                        self.node = self.node.children[0]
-                    return self.node
-                if not self.node.parent:
+                if self.done:
                     raise StopIteration
+                result = self.next
                 try:
-                    self.node = self.node.parent.children[self.path[-1] + 1]
+                    self.next = self.next.parent.children[self.path[-1] + 1]
                     self.path[-1] += 1
+                except AttributeError:
+                    # The root is the only node, so it is a leaf.
+                    self.done = True
+                    return result
                 except IndexError:
-                    while self.node.parent:
-                        self.node = self.node.parent
+                    while self.next.parent:
+                        self.next = self.next.parent
                         index = self.path.pop() + 1
                         if not self.path:
-                            raise StopIteration
-                        if index < len(self.node.children):
+                            self.done = True
+                        if index < len(self.next.children):
                             self.path.append(index)
-                            self.node = self.node.children[index]
+                            self.next = self.next.children[index]
                             break
                     if self.path == [0]:
-                        raise StopIteration
-                    while self.node.children:
+                        self.done = True
+                    while self.next.children:
                         self.path.append(0)
-                        self.node = self.node.children[0]
-                return self.node
+                        self.next = self.next.children[0]
+                return result
 
         return TreeIterator(self)
 
