@@ -1,5 +1,5 @@
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
-from libc.string cimport memset
+from libc.string cimport memset, memcpy
 
 """
 Enumerate all covering spaces with bounded degree of a finite Cayley complex.
@@ -8,7 +8,7 @@ The algorithm used here is the one presented in "Computations with Finitely
 Presented Groups" by Charles Sims, stripped of all of the irrelevant machinery
 and viewed in the more natural context of covering spaces.
 
-Key Conventions:
+Conventions:
 
 - A finite Cayley complex is a 2-complex with 1 vertex, G edges and
   finitely many 2-cells.  Each edge is directed and labeled with a
@@ -137,14 +137,18 @@ cdef class CyclicallyReducedWord(ReducedWord):
         cWord.cyclically_reduce(self)
 
 cdef class CoveringSubgraph:
-    cdef int rank
-    cdef int degree
-    cdef int max_degree
+    cdef public int rank
+    cdef public int degree
+    cdef public int max_degree
+    cdef public int num_edges
     cdef char* outies
     cdef char* innies
+    cdef int height
     
     def __cinit__(self, rank, max_degree):
-        self.degree = 0
+        self.height = 0
+        self.degree = 1
+        self.num_edges = 0
         self.rank = rank
         self.max_degree = max_degree
         cdef int size = self.rank*self.max_degree
@@ -157,13 +161,38 @@ cdef class CoveringSubgraph:
         PyMem_Free(self.outies)
         PyMem_Free(self.innies)
 
+    def __str__(self):
+        cdef int t
+        result = 'CoveringSubgraph with edges:\n'
+        for f in range(self.degree):
+            for l in range(self.rank):
+                 t = self.outies[f*self.rank + l]
+                 if t:
+                     result += '%d--%d->%d\n'%(f + 1, l + 1, t)
+        return result
+
+    def __copy__(self):
+        return self.clone()
+
+    cpdef is_complete(self):
+        return self.num_edges == self.rank*self.degree
+
+    cdef clone(self):
+        cdef int size = self.rank*self.max_degree
+        result = CoveringSubgraph(self.rank, self.max_degree)
+        result.degree = self.degree
+        result.num_edges = self.num_edges
+        memcpy(result.outies, self.outies, size)
+        memcpy(result.innies, self.innies, size)
+        return result
+        
     cdef check_label(self, n):
         assert 0 < n <= self.rank or -self.rank <= n < 0, \
           'Labels must lie in [-{0}, -1] or [1, {0}].'.format(self.rank)
 
     cdef check_vertex(self, n):
         assert 0 < n <= self.max_degree, 'vertices must lie in [1, %d]'%self.max_degree
-    
+
     cpdef add_edge(self, int label, int from_vertex, int to_vertex):
         """
         Add an edge with a **positive** label.
@@ -173,10 +202,15 @@ cdef class CoveringSubgraph:
           'The label must be positive when adding an edge.'
         self.check_vertex(from_vertex)
         self.check_vertex(to_vertex)
+        assert from_vertex <= self.degree and to_vertex <= self.max_degree, \
+            'Vertex index is out of range.'
+        if to_vertex > self.degree:
+            self.degree = to_vertex
         index = (from_vertex - 1)*self.rank + label - 1
         self.outies[index] = to_vertex
         index = (to_vertex - 1)*self.rank + label - 1
         self.innies[index] = from_vertex
+        self.num_edges += 1
 
     cdef act_by(self, int letter, int vertex):
         self.check_vertex(vertex)
@@ -186,7 +220,7 @@ cdef class CoveringSubgraph:
         elif letter < 0:
             return self.innies[(vertex - 1)*self.rank - letter - 1]
 
-    cpdef lift(self, cWord word, vertex):
+    cpdef lift(self, cWord word, int vertex):
         assert word.rank == self.rank
         for n in range(word.length):
             vertex = self.act_by(word.buffer[word.start + n], vertex)
@@ -194,7 +228,7 @@ cdef class CoveringSubgraph:
                 break
         return vertex, n + 1
 
-    cpdef lift_inverse(self, cWord word, vertex):
+    cpdef lift_inverse(self, cWord word, int vertex):
         assert word.rank == self.rank
         cdef int end = word.start + word.length - 1
         for n in range(word.length):
@@ -211,9 +245,13 @@ cdef class SimsTree:
     lifts to a loop.  (It is allowed for a relation to fail to lift
     because an edge is missing from the subgraph.)
     """
+    cdef public int rank
+    cdef public int max_degree
     cdef public SimsNode root
 
     def __init__(self, int rank, int max_degree):
+        self.rank = rank
+        self.max_degree = max_degree
         subgraph=CoveringSubgraph(rank=rank, max_degree=max_degree)
         self.root = SimsNode(subgraph)
 
@@ -254,12 +292,23 @@ cdef class SimsTree:
                             break
                     if self.path == [0]:
                         self.done = True
-                    while self.next.children:
-                        self.path.append(0)
-                        self.next = self.next.children[0]
+                while self.next.children:
+                    self.path.append(0)
+                    self.next = self.next.children[0]
                 return result
 
         return TreeIterator(self)
+
+    cdef add_child(self, child):
+        child.parent.children.append(child)
+
+    def bloom(self):
+        while True:
+            count = 0
+            for tip in self:
+                count += tip.sprout()
+            if count == 0:
+                break
 
 cdef class SimsNode:
     """
@@ -274,11 +323,32 @@ cdef class SimsNode:
         self.subgraph = subgraph
         self.children = []
 
-    def explode(self):
-        if self.children:
-            print("Can't explode a node with children")
-            print(self.children)
-            return
-        for n in range(3):
-            subgraph = CoveringSubgraph(rank=3, max_degree=3)
-            self.children.append(SimsNode(subgraph, parent=self))
+    def sprout(self):
+        cdef int f, t, l
+        cdef CoveringSubgraph g = self.subgraph
+        cdef CoveringSubgraph new
+        assert not self.children, 'Can only burst a leaf.'
+        if g.is_complete():
+            return 0
+        for n in range(g.height, g.rank*g.degree):
+            # can set the height here.
+            if g.outies[n] == 0:
+                break
+        f = n // g.rank
+        l = n % g.rank
+        # Add edges with this from vertex and label to all possible targets.
+        targets = []
+        for n in range(g.degree):
+            t = g.innies[n*g.rank + l]
+            if t == 0:
+                targets.append(n+1)
+        # Also add an edge to a new vertex if allowed.
+        if g.degree < g.max_degree:
+            targets.append(g.degree + 1)
+        new_leaves = []
+        for target in targets:
+            new = g.clone()
+            new.add_edge(l+1, f + 1, target)
+            new_leaves.append(SimsNode(new, parent=self))
+        self.children += new_leaves
+        return len(new_leaves)
