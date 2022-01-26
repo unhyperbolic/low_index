@@ -1,5 +1,6 @@
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from libc.string cimport memset, memcpy
+NotMinimal = Exception()
 
 """
 Enumerate all covering spaces with bounded degree of a finite Cayley complex.
@@ -141,8 +142,8 @@ cdef class CoveringSubgraph:
     cdef public int degree
     cdef public int max_degree
     cdef public int num_edges
-    cdef char* outies
-    cdef char* innies
+    cdef unsigned char* outies
+    cdef unsigned char* innies
     cdef int height
     
     def __cinit__(self, rank, max_degree):
@@ -152,9 +153,9 @@ cdef class CoveringSubgraph:
         self.rank = rank
         self.max_degree = max_degree
         cdef int size = self.rank*self.max_degree
-        self.outies = <char *>PyMem_Malloc(size)
+        self.outies = <unsigned char *>PyMem_Malloc(size)
         memset(self.outies, 0, size)
-        self.innies = <char *>PyMem_Malloc(self.rank**self.max_degree)
+        self.innies = <unsigned char *>PyMem_Malloc(self.rank**self.max_degree)
         memset(self.innies, 0, size)
 
     def __dealloc__(self):
@@ -173,6 +174,115 @@ cdef class CoveringSubgraph:
 
     def __copy__(self):
         return self.clone()
+
+    def __key__(self):
+        return self.outies[:self.rank*self.degree]
+
+    def __hash__(self):
+        return hash(self.__key__())
+
+    def __eq__(self, other):
+        if self.rank != other.rank:
+            return False
+        if self.degree != other.degree:
+            return False
+        for i in range(self.rank*self.degree):
+            if self.outies[i] != other.outies[i]:
+                return False
+        return True
+
+    def __lt__(self, other):
+        return self.__key__() < other.__key__()
+
+    def is_minimal(self):
+        result = True
+        for n in range(2, self.degree):
+            perm, next, check = self.expand_perm(n)
+            #print('perm:', perm)
+            old_outies = [self.outies[i] for i in range(self.degree*self.rank)]
+            #print('old:', [self.outies[i] for i in range(self.degree*self.rank)])
+            new_outies = []
+            for v in range(self.degree):
+                for l in range(self.rank):
+                    if perm[v] == 0:
+                        new_outies.append(0)
+                    else:
+                        new_outies.append(perm[self.outies[(perm[v] - 1)*self.rank + l] - 1])
+            #print('new', [new_outies[i] for i in range(self.degree*self.rank)])
+            if new_outies < old_outies:
+                result = False
+                break
+            if new_outies == old_outies:
+                print('has Automorphism 1 -> %d'%n)
+        #print(result)
+        return result
+
+        # for n in range(1, self.degree):
+        #     try:
+        #         self.expand_perm(n+1, check=True)
+        #     except:
+        #         return False
+        # return True
+
+    def expand_perm(self, int vertex, perm=None, next=None, check=False):
+        if perm is None:
+            # The new basepoint will be named 1
+            perm = [0]*self.degree
+            perm[vertex - 1] = 1
+            next = 2
+            if check:
+                check=1
+        if next > self.degree:
+            #print('Out of indices')
+            return perm, next, check
+        # Examine all of the outgoing edges at a given vertex.
+        # Assign consecutive indices, starting with next, to the
+        # terminal vertices those edges, skipping any of those
+        # endpoints which have already been assigned an index.
+        # If a non-existent edge is found, stop. Otherwise,
+        # recursively visit each of those vertices in order.
+        #print('starting with', perm, next, check)
+        terminals = []
+        for l in range(self.rank):
+            out = self.outies[(vertex - 1)*self.rank + l]
+            if not out:
+                return perm, next, check
+            #print('Checking edge %d--%d-->%d'%(vertex, l+1, out))
+            if not perm[out - 1]:
+                #print('The new index of %d is %d'%(out, next))
+                perm[out - 1] = next
+                if check:
+                    #print('Checking with check =', check)
+                    old_outies = [self.outies[i] for i in range(self.degree*self.rank)]
+                    print('old:', [self.outies[i] for i in range(self.degree*self.rank)])
+                    new_outies = []
+                    for v in range(self.degree):
+                        for l in range(self.rank):
+                            if perm[v] == 0:
+                                new_outies.append(0)
+                            else:
+                                new_outies.append(perm[self.outies[(perm[v] - 1)*self.rank + l] - 1])
+                    print('new', [new_outies[i] for i in range(self.degree*self.rank)])
+                    if new_outies < old_outies:
+                        raise NotMinimal
+                    # The outie matrix is minimal up to the vertex with index check.
+                    # See if adding this new vertex will reduce it.
+                    # for l in range(self.rank):
+                    #     old = self.outies[(check - 1)*self.rank + l]
+                    #     new = self.outies[(perm[check - 1] - 1)*self.rank + l]
+                    #     print('old:', old, 'new:', new)
+                    #     if old < new:
+                    #         break
+                    #     if new < old:
+                    #         print('Not minimal')
+                    #         raise NotMinimal
+                    # check += 1
+                next += 1
+                terminals.append(out)
+        for vertex in terminals:
+            #print('Recursing to %s'%vertex)
+            perm, next, check = self.expand_perm(vertex, perm, next, check)
+        return perm, next, check
 
     cpdef is_complete(self):
         return self.num_edges == self.rank*self.degree
@@ -248,12 +358,22 @@ cdef class SimsTree:
     cdef public int rank
     cdef public int max_degree
     cdef public SimsNode root
+    cdef unsigned char *new
+    cdef unsigned char *wen
+
+    def __cinit__(self):
+        self.new = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
+        self.wen = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
+
+    def __dealloc__(self):
+        PyMem_Free(self.new)
+        PyMem_Free(self.wen)
 
     def __init__(self, int rank, int max_degree):
         self.rank = rank
         self.max_degree = max_degree
         subgraph=CoveringSubgraph(rank=rank, max_degree=max_degree)
-        self.root = SimsNode(subgraph)
+        self.root = SimsNode(subgraph, tree=self)
 
     def __iter__(self):
         class TreeIterator:
@@ -314,19 +434,21 @@ cdef class SimsNode:
     """
     A node in a SimsTree.
     """
+    cdef SimsTree tree
     cdef public SimsNode parent
     cdef public list children
     cdef public CoveringSubgraph subgraph
 
-    def __init__(self, subgraph, parent=None):
-        self.parent = parent
+    def __init__(self, subgraph, tree=None, parent=None):
         self.subgraph = subgraph
+        self.tree = tree
+        self.parent = parent
         self.children = []
 
     def sprout(self):
         cdef int f, t, l
         cdef CoveringSubgraph g = self.subgraph
-        cdef CoveringSubgraph new
+        cdef CoveringSubgraph new_subgraph
         assert not self.children, 'Can only burst a leaf.'
         if g.is_complete():
             return 0
@@ -347,8 +469,98 @@ cdef class SimsNode:
             targets.append(g.degree + 1)
         new_leaves = []
         for target in targets:
-            new = g.clone()
-            new.add_edge(l+1, f + 1, target)
-            new_leaves.append(SimsNode(new, parent=self))
+            new_subgraph = g.clone()
+            new_subgraph.add_edge(l+1, f + 1, target)
+            new_leaf = SimsNode(new_subgraph, tree=self.tree, parent=self)
+            new_leaves.append(new_leaf)
         self.children += new_leaves
         return len(new_leaves)
+
+    cpdef keep(self):
+        """
+        Returns False if the subgraph can provably not be extended to
+        a cover which is minimal in its conjugacy class.
+
+        Covering are ordered by comparing their flattened outie matrices
+        in lexicographical order.  A priori the outie matrix of a covering
+        graph is determined by choosing an index for each vertex.  However
+        for the subgraphs that we construct the outie matrix is actually
+        determined just by the choice of a basepoint.  This is because the
+        graphs are constructed to have minimal outie matrices given the
+        choice of basepoint.  More specifically, the basepoint always has
+        index n and the remaining vertices are ordered according to which
+        vertex is the first one to become the terminal vertex of an edge.
+        So the second vertex is the terminal vertex of the first (ordered
+        by label) edge attached to vertex 1 which is not a loop.  And so
+        on.
+
+        Since any conjugate of the subgroup corresponding to a covering
+        graph can be obtained by changing the basepoint, and since every
+        choice of basepoint determines an ordering of the vertices, we
+        can decide which choice of basepoint gives the minimal element
+        of the conjugacy class.  Even when working with a proper subgraph
+        of a covering graph (containing the basepoint) it may be possible
+        to deduce that the subgraph cannot be extended to a minimal
+        covering graph.  In such a case the subgraph should not be added
+        to the Sims tree.  If this test is done at each stage of the
+        construction of the tree, the complete graphs in the final tree
+        will automatically be minimal.
+
+        The idea of this method is to iterate through all vertices of
+        the subgraph and to build as much of the vertex ordering as
+        possible, returning False as soon as the outie matrix given by
+        the new ordering would have a smaller outie matrix.  In the
+        code, the array new (partially) represents the permutation
+        mapping the original vertex indices to the new indices, and
+        the array wen represents its inverse.  The temporary memory
+        used for these belongs to the tree.
+        """
+        cdef unsigned char *new = self.tree.new
+        cdef unsigned char *wen = self.tree.wen
+        cdef int v, l, bp, last_index, a, b, c, bail
+        cdef int degree = self.subgraph.degree
+        cdef int rank = self.subgraph.rank
+        cdef unsigned char *outies = self.subgraph.outies
+        #print([outies[i] for i in range(rank*degree)])
+        #print(self.subgraph)
+        memset(new, 0, degree + 1)
+        for bp in range(2, degree + 1):
+            # Attempt to find the permutation for this basepoint
+            # An edge V--L->W will appear as new[V]--L->new[W]
+            # after moving the basepoint.
+            last_index = 1
+            new[bp] = 1
+            wen[1] = bp
+            print('moving basepoint to %d'%bp)
+            print('outies', [outies[i] for i in range(rank*degree)])
+            for vertex in range(2, degree + 1):
+                bail = False
+                for l in range(rank):
+                    print('vertex =', vertex, 'wen[vertex] =', wen[vertex])
+                    a = outies[(vertex - 1)*rank + l]
+                    b = outies[(wen[vertex] - 1)*rank + l]
+                    print('a =', a, 'b =', b)
+                    if a == 0 or b == 0:
+                        bail = True
+                        break
+                    if new[b] == 0:
+                        last_index += 1
+                        new[b] = last_index
+                        wen[last_index] = b
+                        print([new[i] for i in range(1, degree+ 1)])
+                    c = new[b]
+                    print('a =', a, 'b =', b, 'c =', c)
+                    if c < a:
+                        print('final:', [new[i] for i in range(1, degree+1)])
+                        return False
+                    if c > a:
+                        print('c > a')
+                        bail = True
+                        break
+                if bail:
+                    print('bailed')
+                    for n in range(1, last_index + 1):
+                        new[wen[n]] = 0
+                    continue
+        print('final:',[new[i] for i in range(degree)])
+        return True
