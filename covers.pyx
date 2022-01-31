@@ -403,17 +403,20 @@ cdef class CoveringSubgraph:
         Add an edge with a **positive** label.
         """
         cdef int index
-        assert 0 < label <= self.rank, \
-          'The label must be positive when adding an edge.'
         self.check_vertex(from_vertex)
         self.check_vertex(to_vertex)
-        assert from_vertex <= self.degree and to_vertex <= self.max_degree, \
+        if label < 0:
+            label, from_vertex, to_vertex = -label, to_vertex, from_vertex
+        assert from_vertex <= self.max_degree and to_vertex <= self.max_degree, \
             'Vertex index is out of range.'
-        if to_vertex > self.degree:
-            self.degree = to_vertex
+        if from_vertex > self.degree or to_vertex > self.degree:
+            assert to_vertex <= self.degree + 1 and from_vertex <= self.degree + 1 
+            self.degree += 1
         index = (from_vertex - 1)*self.rank + label - 1
+        assert self.outies[index] == 0
         self.outies[index] = to_vertex
         index = (to_vertex - 1)*self.rank + label - 1
+        assert self.innies[index] == 0
         self.innies[index] = from_vertex
         self.num_edges += 1
 
