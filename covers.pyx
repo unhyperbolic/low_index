@@ -1,7 +1,8 @@
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from libc.string cimport memset, memcpy
 NotMinimal = Exception()
-
+NotEmbedded = Exception()
+CompleteCover = Exception()
 """
 Enumerate all covering spaces with bounded degree of a finite Cayley complex.
 
@@ -22,8 +23,8 @@ Conventions:
 - The vertices of a degree D finite cover of a Cayley complex are
   indexed as 1, ..., D. The base point is the vertex with index 1.
 
-- The number G of edges is called the rank in the code. That refers to
-  the rank of the free group that would be used in the group
+- The number R of edge labels is called the rank in the code. That
+  refers to the rank of the free group that would be used in the group
   presentation associated with the Cayley complex.  Note that when a
   word is specified the rank must also be specified, since the word is
   being viewed as representing an element of a specific free group.
@@ -211,10 +212,13 @@ cdef class ReducedWords:
     cdef ReducedWord current
     cdef int rank, max_length
 
-    def __init__(self, int rank, int max_length=1):
+    def __init__(self, int rank, int max_length=1, ReducedWord start=None):
         self.rank = rank
         self.max_length = max_length
-        self.current = ReducedWord(rank, [])
+        if start:
+            self.current = start
+        else:
+            self.current = ReducedWord(rank, [])
 
     def __next__(self):
         if self.current.length > self.max_length:
@@ -261,12 +265,16 @@ cdef class CoveringSubgraph:
         cdef int t
         result = 'CoveringSubgraph with edges:\n'
         for f in range(self.degree):
-            for l in range(self.rank):
-                 t = self.outies[f*self.rank + l]
+            for n in range(self.rank):
+                 t = self.outies[f*self.rank + n]
                  if t:
-                     result += '%d--%d->%d\n'%(f + 1, l + 1, t)
-        return result
+                     result += '%d--%d->%d\n'%(f + 1, n + 1, t)
+        return result[:-1]
 
+    def _data(self):
+        print('out:', [n for n in self.outies[:self.rank*self.degree]])
+        print('in:', [n for n in self.innies[:self.rank*self.degree]])
+        
     def __copy__(self):
         return self.clone()
 
@@ -307,9 +315,6 @@ cdef class CoveringSubgraph:
             if new_outies < old_outies:
                 result = False
                 break
-            if new_outies == old_outies:
-                print('has Automorphism 1 -> %d'%n)
-        #print(result)
         return result
 
         # for n in range(1, self.degree):
@@ -349,7 +354,7 @@ cdef class CoveringSubgraph:
                 if check:
                     #print('Checking with check =', check)
                     old_outies = [self.outies[i] for i in range(self.degree*self.rank)]
-                    print('old:', [self.outies[i] for i in range(self.degree*self.rank)])
+                    #print('old:', [self.outies[i] for i in range(self.degree*self.rank)])
                     new_outies = []
                     for v in range(self.degree):
                         for l in range(self.rank):
@@ -357,7 +362,7 @@ cdef class CoveringSubgraph:
                                 new_outies.append(0)
                             else:
                                 new_outies.append(perm[self.outies[(perm[v] - 1)*self.rank + l] - 1])
-                    print('new', [new_outies[i] for i in range(self.degree*self.rank)])
+                    #print('new', [new_outies[i] for i in range(self.degree*self.rank)])
                     if new_outies < old_outies:
                         raise NotMinimal
                     # The outie matrix is minimal up to the vertex with index check.
@@ -398,26 +403,31 @@ cdef class CoveringSubgraph:
     cdef check_vertex(self, n):
         assert 0 < n <= self.max_degree, 'vertices must lie in [1, %d]'%self.max_degree
 
-    cpdef add_edge(self, int label, int from_vertex, int to_vertex):
+    cpdef add_edge(self, int letter, int from_vertex, int to_vertex):
         """
-        Add an edge with a **positive** label.
+        Add an edge.
         """
-        cdef int index
+        cdef int out_index, in_index, label = letter
         self.check_vertex(from_vertex)
         self.check_vertex(to_vertex)
-        if label < 0:
-            label, from_vertex, to_vertex = -label, to_vertex, from_vertex
+        if letter < 0:
+            label, from_vertex, to_vertex = -letter, to_vertex, from_vertex
         assert from_vertex <= self.max_degree and to_vertex <= self.max_degree, \
             'Vertex index is out of range.'
         if from_vertex > self.degree or to_vertex > self.degree:
             assert to_vertex <= self.degree + 1 and from_vertex <= self.degree + 1 
             self.degree += 1
-        index = (from_vertex - 1)*self.rank + label - 1
-        assert self.outies[index] == 0
-        self.outies[index] = to_vertex
-        index = (to_vertex - 1)*self.rank + label - 1
-        assert self.innies[index] == 0
-        self.innies[index] = from_vertex
+        out_index = (from_vertex - 1)*self.rank + label - 1
+        in_index = (to_vertex - 1)*self.rank + label - 1
+        if self.outies[out_index] != 0 or self.innies[in_index] != 0:
+            print('Error adding edge %d--(%d)->%d'%(
+                from_vertex, letter, to_vertex))
+            self._data()
+            print(self)
+        assert self.outies[out_index] == 0, str(self)
+        assert self.innies[in_index] == 0, str(self)
+        self.outies[out_index] = to_vertex
+        self.innies[in_index] = from_vertex
         self.num_edges += 1
 
     cdef act_by(self, int letter, int vertex):
@@ -429,21 +439,58 @@ cdef class CoveringSubgraph:
             return self.innies[(vertex - 1)*self.rank - letter - 1]
 
     cpdef lift(self, cWord word, int vertex):
+        cdef int initial = vertex
+        cdef int length = 0
+        cdef int saved = vertex
         assert word.rank == self.rank
         for n in range(word.length):
             vertex = self.act_by(word.buffer[word.start + n], vertex)
             if vertex == 0:
                 break
-        return vertex, n + 1
+            saved = vertex
+            length += 1
+        return saved, length
 
     cpdef lift_inverse(self, cWord word, int vertex):
+        cdef int length = 0
+        cdef int saved = vertex
         assert word.rank == self.rank
         cdef int end = word.start + word.length - 1
         for n in range(word.length):
             vertex = self.act_by(-word.buffer[end - n], vertex)
             if vertex == 0:
                 break
-        return vertex, n + 1
+            saved = vertex
+            length += 1
+        return saved, length
+
+    def first_missing_edge(self, int basepoint=1):
+        cdef int v, l
+        for n in range(self.height, self.rank*self.degree):
+            # can set the height here.
+            if self.outies[n] == 0:
+                v = n // self.rank
+                l = n % self.rank
+                return v + 1, l + 1
+            if self.innies[n] == 0:
+                v = n // self.rank
+                l = n % self.rank
+                return v + 1, -(l + 1)
+
+    def XXXfirst_missing_edge(self, int basepoint=1):
+        """
+        Find the first missing edge.  Return its vertex and label.  If the
+        graph is a complete cover, return None.
+        """
+        cdef int end, length
+        cdef ReducedWord w
+        if self.is_complete():
+            return
+        w = ReducedWord(self.rank, [basepoint])
+        for w in ReducedWords(self.rank, 2*self.rank*self.degree):
+            end, length = self.lift(w, basepoint)
+            if length < w.length:
+                return end, w.buffer[w.start + length]
 
 cdef class SimsTree:
     """
@@ -472,11 +519,12 @@ cdef class SimsTree:
         self.max_degree = max_degree
         subgraph=CoveringSubgraph(rank=rank, max_degree=max_degree)
         self.root = SimsNode(subgraph, tree=self)
+        self.bloom()
 
     def __iter__(self):
         class TreeIterator:
             """
-            Iterate through all leaf nodes in the tree.
+            Iterate through all leaf nodes in the tree with complete subgraphs.
             """
 
             def __init__(self, SimsTree tree):
@@ -544,33 +592,42 @@ cdef class SimsNode:
         self.children = []
 
     def sprout(self):
-        cdef int f, t, l
+        """
+        Find the first word which does not lift to this based partial
+        covering.  Add a child for each possible way to add an edge that
+        makes the next letter of the word lift.  Return the number of
+        children added.
+        """
+        cdef int v, l
         cdef CoveringSubgraph g = self.subgraph
         cdef CoveringSubgraph new_subgraph
-        assert not self.children, 'Can only burst a leaf.'
-        if g.is_complete():
+        assert not self.children, 'Can only sprout from a bud.'
+        try:
+            v, l = g.first_missing_edge()
+        except TypeError:
             return 0
-        for n in range(g.height, g.rank*g.degree):
-            # can set the height here.
-            if g.outies[n] == 0:
-                break
-        f = n // g.rank
-        l = n % g.rank
-        # Add edges with this from vertex and label to all possible targets.
+        # Add edges with from this slot to all possible target slots.
         targets = []
-        for n in range(g.degree):
-            t = g.innies[n*g.rank + l]
-            if t == 0:
-                targets.append(n+1)
+        if l > 0:
+            for n in range(g.degree):
+                t = g.innies[n*g.rank + l - 1]
+                if t == 0:
+                    targets.append((l, v, n+1))
+        else:
+            for n in range(g.degree):
+                t = g.outies[n*g.rank - l - 1]
+                if t == 0:
+                    targets.append((l, v, n+1))
         # Also add an edge to a new vertex if allowed.
         if g.degree < g.max_degree:
-            targets.append(g.degree + 1)
+            targets.append((l, v, g.degree + 1))
         new_leaves = []
         for target in targets:
             new_subgraph = g.clone()
-            new_subgraph.add_edge(l+1, f + 1, target)
+            new_subgraph.add_edge(*target)
             new_leaf = SimsNode(new_subgraph, tree=self.tree, parent=self)
-            new_leaves.append(new_leaf)
+            if new_leaf.keep():
+                new_leaves.append(new_leaf)
         self.children += new_leaves
         return len(new_leaves)
 
@@ -579,86 +636,96 @@ cdef class SimsNode:
         Returns False if the subgraph can provably not be extended to
         a cover which is minimal in its conjugacy class.
 
-        Covering are ordered by comparing their flattened outie matrices
-        in lexicographical order.  A priori the outie matrix of a covering
-        graph is determined by choosing an index for each vertex.  However
-        for the subgraphs that we construct the outie matrix is actually
-        determined just by the choice of a basepoint.  This is because the
-        graphs are constructed to have minimal outie matrices given the
-        choice of basepoint.  More specifically, the basepoint always has
-        index n and the remaining vertices are ordered according to which
-        vertex is the first one to become the terminal vertex of an edge.
-        So the second vertex is the terminal vertex of the first (ordered
-        by label) edge attached to vertex 1 which is not a loop.  And so
-        on.
+        The ordering of based coverings is given as follows.  Given a
+        covering with rank R and degree D, consider all pairs (N, L)
+        where N is a vertex index in [1, D] and L is a signed label in
+        [-R, -1] or [1, R].  Order the signed labels as 1, -1, 2, -2,
+        ..., R, -R.  Use that to lex order the 2*D*R pairs (N, L).  For
+        each pair (N,L) assigne an edge E(N, L) and a number s(N, L) as
+        follows:
 
-        Since any conjugate of the subgroup corresponding to a covering
-        graph can be obtained by changing the basepoint, and since every
-        choice of basepoint determines an ordering of the vertices, we
-        can decide which choice of basepoint gives the minimal element
-        of the conjugacy class.  Even when working with a proper subgraph
-        of a covering graph (containing the basepoint) it may be possible
-        to deduce that the subgraph cannot be extended to a minimal
-        covering graph.  In such a case the subgraph should not be added
-        to the Sims tree.  If this test is done at each stage of the
-        construction of the tree, the complete graphs in the final tree
-        will automatically be minimal.
+            * if L > 0, E(N, L) is the edge with initial vertex N and
+              label L and s(N, L) is index of its terminal vertex.
 
-        The idea of this method is to iterate through all vertices of
-        the subgraph and to build as much of the vertex ordering as
-        possible, returning False as soon as the outie matrix given by
-        the new ordering would have a smaller outie matrix.  In the
-        code, the array new (partially) represents the permutation
-        mapping the original vertex indices to the new indices, and
-        the array wen represents its inverse.  The temporary memory
-        used for these belongs to the tree.
+            * if L < 0, E(N, L) is the edge with terminal vertex N and
+              label -L and s(N, L) is the index of its initial vertex.
+
+        This produces a list of 2*D*R integers which is the complexity
+        of the covering, where complexities are ordered lexicographically.
+
+        Any conjugate of the subgroup corresponding to a covering
+        graph can be obtained by changing the basepoint.  A choice of
+        basepoint determines an indexing of the vertices where the index
+        of a vertex v is the index of the first pair (N, L) such that
+        E(N, L) has v as its terminal (initial) vertex if L > 0 (L < 0).
+        We only want to enumerate based coverings for which the basepoint
+        is chosen to minimize complexity.  The subgroups corresponding
+        to these coverings will then by unique up to conjugacy.
+
+        Even when working with a proper subgraph of a covering graph
+        (containing the basepoint) it may be possible to deduce that
+        the subgraph cannot be extended to a minimal covering.  In
+        such a case the subgraph should not be added to the Sims tree.
+        If this test is done at each stage of the construction of the
+        tree, the complete graphs in the final tree will automatically
+        be minimal.
+
+        This method iterates through all vertices of the subgraph and
+        to build as much of the vertex ordering as possible, returning
+        False if there exists a choice of basepoint which would result
+        in a lower complexity, but returning True if it is not
+        possible to determine whether the basepoint produces a minimal
+        complexity.
         """
-        cdef unsigned char *new = self.tree.new
-        cdef unsigned char *wen = self.tree.wen
-        cdef int v, l, bp, last_index, a, b, c, bail
+        cdef unsigned char *old_to_new = self.tree.new
+        cdef unsigned char *new_to_old = self.tree.wen
+        cdef int bp, a, b, c, last_index, old_index, new_index, next_bp
         cdef int degree = self.subgraph.degree
         cdef int rank = self.subgraph.rank
         cdef unsigned char *outies = self.subgraph.outies
-        #print([outies[i] for i in range(rank*degree)])
-        #print(self.subgraph)
-        memset(new, 0, degree + 1)
-        for bp in range(2, degree + 1):
+        cdef unsigned char *innies = self.subgraph.innies
+        for bp in range(2, degree + 1): # i
+            memset(old_to_new, 0, degree + 1)
+            memset(new_to_old, 0, degree + 1)
+            next_bp = 0
             # Attempt to find the permutation for this basepoint
             # An edge V--L->W will appear as new[V]--L->new[W]
             # after moving the basepoint.
             last_index = 1
-            new[bp] = 1
-            wen[1] = bp
-            print('moving basepoint to %d'%bp)
-            print('outies', [outies[i] for i in range(rank*degree)])
-            for vertex in range(2, degree + 1):
-                bail = False
-                for l in range(rank):
-                    print('vertex =', vertex, 'wen[vertex] =', wen[vertex])
-                    a = outies[(vertex - 1)*rank + l]
-                    b = outies[(wen[vertex] - 1)*rank + l]
-                    print('a =', a, 'b =', b)
+            old_to_new[bp] = 1
+            new_to_old[1] = bp
+            for new_index in range(1, degree + 1): # u
+                old_index = new_to_old[new_index]
+                assert old_index != 0
+                for n in range(2*rank):
+                    sign = n % 2
+                    l = n // 2
+                    bail = False
+                    # Try to find an incident edge with label l + 1 or -(l + 1).
+                    if sign == 0: # positive label
+                        a = outies[(new_index - 1)*rank + l] # outgoing to old a
+                        b = outies[(old_index - 1)*rank + l] # outgoing to old b
+                    else: # negative label
+                        a = innies[(new_index - 1)*rank + l] # incoming from old a
+                        b = innies[(old_index - 1)*rank + l] # incoming from old b
                     if a == 0 or b == 0:
-                        bail = True
+                        # Not enough edges to decide.
+                        next_bp = True
                         break
-                    if new[b] == 0:
+                    #Compare the old and new indices of the other end of the edge
+                    if old_to_new[b] == 0:
+                        # Updating the mappings between the old and new indices
                         last_index += 1
-                        new[b] = last_index
-                        wen[last_index] = b
-                        print([new[i] for i in range(1, degree+ 1)])
-                    c = new[b]
-                    print('a =', a, 'b =', b, 'c =', c)
+                        old_to_new[b] = last_index
+                        new_to_old[last_index] = b
+                    c = old_to_new[b]
                     if c < a:
-                        print('final:', [new[i] for i in range(1, degree+1)])
+                        # The new basepoint is better - discard this graph.
                         return False
                     if c > a:
-                        print('c > a')
-                        bail = True
+                        # The old basepoint is better - try the next one.
+                        next_bp = True
                         break
-                if bail:
-                    print('bailed')
-                    for n in range(1, last_index + 1):
-                        new[wen[n]] = 0
-                    continue
-        print('final:',[new[i] for i in range(degree)])
+                if next_bp:
+                    break
         return True
