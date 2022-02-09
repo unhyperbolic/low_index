@@ -464,7 +464,7 @@ cdef class CoveringSubgraph:
             length += 1
         return saved, length
 
-    def first_missing_edge(self, int basepoint=1):
+    cdef first_empty_slot(self, int basepoint=1):
         cdef int v, l
         for n in range(self.height, self.rank*self.degree):
             # can set the height here.
@@ -477,21 +477,6 @@ cdef class CoveringSubgraph:
                 l = n % self.rank
                 return v + 1, -(l + 1)
 
-    def XXXfirst_missing_edge(self, int basepoint=1):
-        """
-        Find the first missing edge.  Return its vertex and label.  If the
-        graph is a complete cover, return None.
-        """
-        cdef int end, length
-        cdef ReducedWord w
-        if self.is_complete():
-            return
-        w = ReducedWord(self.rank, [basepoint])
-        for w in ReducedWords(self.rank, 2*self.rank*self.degree):
-            end, length = self.lift(w, basepoint)
-            if length < w.length:
-                return end, w.buffer[w.start + length]
-
 cdef class SimsTree:
     """
     A tree of CoveringSubgraphs constructed by the algorithm.  Each
@@ -503,6 +488,9 @@ cdef class SimsTree:
     cdef public int rank
     cdef public int max_degree
     cdef public SimsNode root
+    cdef SimsNode next
+    cdef char done
+    # Workspaces used by SimsNodes when checking minimality
     cdef unsigned char *new
     cdef unsigned char *wen
 
@@ -536,6 +524,7 @@ cdef class SimsTree:
                 self.done = False
 
             def __next__(self):
+                cdef SimsNode result
                 if self.done:
                     raise StopIteration
                 result = self.next
@@ -565,10 +554,15 @@ cdef class SimsTree:
 
         return TreeIterator(self)
 
+    def as_list(self):
+        return [n.subgraph for n in self if n.subgraph.is_complete()]
+
     cdef add_child(self, child):
         child.parent.children.append(child)
 
-    def bloom(self):
+    cdef bloom(self):
+        cdef SimsNode tip
+        cdef int count = 0
         while True:
             count = 0
             for tip in self:
@@ -578,7 +572,7 @@ cdef class SimsTree:
 
 cdef class SimsNode:
     """
-    A node in a SimsTree.
+    A node in a SimsTree, containing a based partial covering.
     """
     cdef SimsTree tree
     cdef public SimsNode parent
@@ -591,19 +585,19 @@ cdef class SimsNode:
         self.parent = parent
         self.children = []
 
-    def sprout(self):
+    cdef sprout(self):
         """
-        Find the first word which does not lift to this based partial
-        covering.  Add a child for each possible way to add an edge that
-        makes the next letter of the word lift.  Return the number of
+        Find the first empty edge slot in this based partial covering.  For each
+        possible way to add an edge in that slot, create a child node containing
+        the subgraph obtained by adding that edge.  Return the number of
         children added.
         """
-        cdef int v, l
-        cdef CoveringSubgraph g = self.subgraph
-        cdef CoveringSubgraph new_subgraph
+        cdef int v, l, count
+        cdef CoveringSubgraph new_subgraph, g = self.subgraph
+        cdef SimsNode parent, node, new_leaf
         assert not self.children, 'Can only sprout from a bud.'
         try:
-            v, l = g.first_missing_edge()
+            v, l = g.first_empty_slot()
         except TypeError:
             return 0
         # Add edges with from this slot to all possible target slots.
@@ -621,28 +615,27 @@ cdef class SimsNode:
         # Also add an edge to a new vertex if allowed.
         if g.degree < g.max_degree:
             targets.append((l, v, g.degree + 1))
-        new_leaves = []
+        count = 0
         for target in targets:
             new_subgraph = g.clone()
             new_subgraph.add_edge(*target)
             new_leaf = SimsNode(new_subgraph, tree=self.tree, parent=self)
             if new_leaf.keep():
-                new_leaves.append(new_leaf)
-        self.children += new_leaves
-        return len(new_leaves)
+                self.tree.add_child(new_leaf)
+                count += 1
+        return count
 
-    cpdef keep(self):
+    cdef keep(self):
         """
-        Returns False if the subgraph can provably not be extended to
-        a cover which is minimal in its conjugacy class.
+        Return False if the subgraph can provably not be extended to a cover
+        which is minimal in its conjugacy class, True otherwise.
 
-        The ordering of based coverings is given as follows.  Given a
-        covering with rank R and degree D, consider all pairs (N, L)
-        where N is a vertex index in [1, D] and L is a signed label in
-        [-R, -1] or [1, R].  Order the signed labels as 1, -1, 2, -2,
-        ..., R, -R.  Use that to lex order the 2*D*R pairs (N, L).  For
-        each pair (N,L) assigne an edge E(N, L) and a number s(N, L) as
-        follows:
+        The ordering of based coverings is given as follows.  Given a covering
+        with rank R and degree D, consider all pairs (N, L) where N is a vertex
+        index in [1, D] and L is a signed label in [-R, -1] or [1, R].  Order
+        the signed labels as 1, -1, 2, -2, ..., R, -R.  Use that to lex order
+        the 2*D*R pairs (N, L).  For each pair (N,L) assign an edge E(N, L) and
+        a number s(N, L) as follows:
 
             * if L > 0, E(N, L) is the edge with initial vertex N and
               label L and s(N, L) is index of its terminal vertex.
@@ -650,51 +643,47 @@ cdef class SimsNode:
             * if L < 0, E(N, L) is the edge with terminal vertex N and
               label -L and s(N, L) is the index of its initial vertex.
 
-        This produces a list of 2*D*R integers which is the complexity
-        of the covering, where complexities are ordered lexicographically.
+        The list [s(N, L) for all (N, L)] is the complexity of the covering;
+        complexities are ordered lexicographically.
 
-        Any conjugate of the subgroup corresponding to a covering
-        graph can be obtained by changing the basepoint.  A choice of
-        basepoint determines an indexing of the vertices where the index
-        of a vertex v is the index of the first pair (N, L) such that
-        E(N, L) has v as its terminal (initial) vertex if L > 0 (L < 0).
-        We only want to enumerate based coverings for which the basepoint
-        is chosen to minimize complexity.  The subgroups corresponding
-        to these coverings will then by unique up to conjugacy.
+        Any conjugate of the subgroup corresponding to a covering graph can be
+        obtained by changing the basepoint.  A choice of basepoint determines an
+        indexing of the vertices where the index of a vertex v is the index of
+        the first pair (N, L) such that E(N, L) has v as its terminal (initial)
+        vertex if L > 0 (L < 0).  We only enumerate based coverings for which
+        the basepoint is chosen to minimize complexity.  The subgroups
+        corresponding to these coverings will then by unique up to conjugacy.
 
-        Even when working with a proper subgraph of a covering graph
-        (containing the basepoint) it may be possible to deduce that
-        the subgraph cannot be extended to a minimal covering.  In
-        such a case the subgraph should not be added to the Sims tree.
-        If this test is done at each stage of the construction of the
-        tree, the complete graphs in the final tree will automatically
-        be minimal.
+        Even when working with a proper subgraph of a covering graph (containing
+        the basepoint) it may be possible to deduce that the subgraph cannot be
+        extended to a minimal covering.  In such a case the subgraph should not
+        be added to the Sims tree.  If this test is done at each stage of the
+        construction of the tree, the complete graphs in the final tree will
+        automatically be minimal.
 
-        This method iterates through all vertices of the subgraph and
-        to build as much of the vertex ordering as possible, returning
-        False if there exists a choice of basepoint which would result
-        in a lower complexity, but returning True if it is not
-        possible to determine whether the basepoint produces a minimal
-        complexity.
+        This method iterates through all vertices of the subgraph, constructing
+        as much as possible of the vertex ordering determined by taking that
+        vertex as a basepoint.  It returns False as soon as it encounters an
+        edge which would result in a higher complexity. If no such edge is found
+        for any choice of basepoint it returns True.
         """
         cdef unsigned char *old_to_new = self.tree.new
         cdef unsigned char *new_to_old = self.tree.wen
-        cdef int bp, a, b, c, last_index, old_index, new_index, next_bp
+        cdef int basepoint, next_index, old_index, new_index, next_basepoint
         cdef int degree = self.subgraph.degree
         cdef int rank = self.subgraph.rank
+        cdef int a, b, c
         cdef unsigned char *outies = self.subgraph.outies
         cdef unsigned char *innies = self.subgraph.innies
-        for bp in range(2, degree + 1): # i
+        for basepoint in range(2, degree + 1):
             memset(old_to_new, 0, degree + 1)
             memset(new_to_old, 0, degree + 1)
-            next_bp = 0
-            # Attempt to find the permutation for this basepoint
-            # An edge V--L->W will appear as new[V]--L->new[W]
-            # after moving the basepoint.
-            last_index = 1
-            old_to_new[bp] = 1
-            new_to_old[1] = bp
-            for new_index in range(1, degree + 1): # u
+            next_basepoint = 0
+            # Attempt to find the indexing determined by this basepoint.
+            next_index = 1
+            old_to_new[basepoint] = 1
+            new_to_old[1] = basepoint
+            for new_index in range(1, degree + 1):
                 old_index = new_to_old[new_index]
                 assert old_index != 0
                 for n in range(2*rank):
@@ -710,22 +699,22 @@ cdef class SimsNode:
                         b = innies[(old_index - 1)*rank + l] # incoming from old b
                     if a == 0 or b == 0:
                         # Not enough edges to decide.
-                        next_bp = True
+                        next_basepoint = True
                         break
                     #Compare the old and new indices of the other end of the edge
                     if old_to_new[b] == 0:
-                        # Updating the mappings between the old and new indices
-                        last_index += 1
-                        old_to_new[b] = last_index
-                        new_to_old[last_index] = b
+                        # Update the mappings between the old and new indices.
+                        next_index += 1
+                        old_to_new[b] = next_index
+                        new_to_old[next_index] = b
                     c = old_to_new[b]
                     if c < a:
                         # The new basepoint is better - discard this graph.
                         return False
                     if c > a:
                         # The old basepoint is better - try the next one.
-                        next_bp = True
+                        next_basepoint = True
                         break
-                if next_bp:
+                if next_basepoint:
                     break
         return True
