@@ -234,16 +234,14 @@ cdef class CyclicallyReducedWord(ReducedWord):
         cWord.cyclically_reduce(self)            
 
 cdef class CoveringSubgraph:
-    cdef public int rank
-    cdef public int degree
-    cdef public int max_degree
-    cdef public int num_edges
+    cdef int rank
+    cdef int degree
+    cdef int max_degree
+    cdef int num_edges
     cdef unsigned char* outies
     cdef unsigned char* innies
-    cdef int height
     
     def __cinit__(self, rank, max_degree):
-        self.height = 0
         self.degree = 1
         self.num_edges = 0
         self.rank = rank
@@ -251,7 +249,7 @@ cdef class CoveringSubgraph:
         cdef int size = self.rank*self.max_degree
         self.outies = <unsigned char *>PyMem_Malloc(size)
         memset(self.outies, 0, size)
-        self.innies = <unsigned char *>PyMem_Malloc(self.rank**self.max_degree)
+        self.innies = <unsigned char *>PyMem_Malloc(size)
         memset(self.innies, 0, size)
 
     def __dealloc__(self):
@@ -313,40 +311,38 @@ cdef class CoveringSubgraph:
     cdef check_vertex(self, n):
         assert 0 < n <= self.max_degree, 'vertices must lie in [1, %d]'%self.max_degree
 
-    cpdef add_edge(self, int letter, int from_vertex, int to_vertex):
+    cdef add_edge(self, int letter, int from_vertex, int to_vertex):
         """
         Add an edge.
         """
         cdef int out_index, in_index, label = letter
-        self.check_vertex(from_vertex)
-        self.check_vertex(to_vertex)
         if letter < 0:
             label, from_vertex, to_vertex = -letter, to_vertex, from_vertex
-        assert from_vertex <= self.max_degree and to_vertex <= self.max_degree, \
-            'Vertex index is out of range.'
         if from_vertex > self.degree or to_vertex > self.degree:
-            assert to_vertex <= self.degree + 1 and from_vertex <= self.degree + 1 
             self.degree += 1
         out_index = (from_vertex - 1)*self.rank + label - 1
         in_index = (to_vertex - 1)*self.rank + label - 1
-        if self.outies[out_index] != 0 or self.innies[in_index] != 0:
-            print('Error adding edge %d--(%d)->%d'%(
-                from_vertex, letter, to_vertex))
-            self._data()
-            print(self)
-        assert self.outies[out_index] == 0, str(self)
-        assert self.innies[in_index] == 0, str(self)
         self.outies[out_index] = to_vertex
         self.innies[in_index] = from_vertex
         self.num_edges += 1
 
-    cdef act_by(self, int letter, int vertex):
-        self.check_vertex(vertex)
-        self.check_label(letter)
+    cdef inline act_by(self, int letter, int vertex):
         if letter > 0:
             return self.outies[(vertex - 1)*self.rank + letter - 1]
         elif letter < 0:
             return self.innies[(vertex - 1)*self.rank - letter - 1]
+
+    cdef first_empty_slot(self, int basepoint=1):
+        cdef int v, l
+        for n in range(self.rank*self.degree):
+            if self.outies[n] == 0:
+                v = n // self.rank
+                l = n % self.rank
+                return v + 1, l + 1
+            if self.innies[n] == 0:
+                v = n // self.rank
+                l = n % self.rank
+                return v + 1, -(l + 1)
 
     cpdef lift(self, cWord word, int vertex):
         cdef int initial = vertex
@@ -373,19 +369,6 @@ cdef class CoveringSubgraph:
             saved = vertex
             length += 1
         return saved, length
-
-    cdef first_empty_slot(self, int basepoint=1):
-        cdef int v, l
-        for n in range(self.height, self.rank*self.degree):
-            # can set the height here.
-            if self.outies[n] == 0:
-                v = n // self.rank
-                l = n % self.rank
-                return v + 1, l + 1
-            if self.innies[n] == 0:
-                v = n // self.rank
-                l = n % self.rank
-                return v + 1, -(l + 1)
 
 cdef class SimsTree:
     """
@@ -502,10 +485,10 @@ cdef class SimsNode:
         the subgraph obtained by adding that edge.  Return the number of
         children added.
         """
-        cdef int v, l, count
+        cdef int n, v, l, count
         cdef CoveringSubgraph new_subgraph, g = self.subgraph
         cdef SimsNode parent, node, new_leaf
-        assert not self.children, 'Can only sprout from a bud.'
+        #assert not self.children, 'Can only sprout from a bud.'
         try:
             v, l = g.first_empty_slot()
         except TypeError:
@@ -526,9 +509,9 @@ cdef class SimsNode:
         if g.degree < g.max_degree:
             targets.append((l, v, g.degree + 1))
         count = 0
-        for target in targets:
+        for l, v, n in targets:
             new_subgraph = g.clone()
-            new_subgraph.add_edge(*target)
+            new_subgraph.add_edge(l, v, n)
             new_leaf = SimsNode(new_subgraph, tree=self.tree, parent=self)
             if new_leaf.keep():
                 self.tree.add_child(new_leaf)
@@ -580,9 +563,8 @@ cdef class SimsNode:
         """
         cdef unsigned char *old_to_new = self.tree.old_to_new
         cdef unsigned char *new_to_old = self.tree.new_to_old
-        cdef int basepoint, next_index, old_index, new_index, next_basepoint
-        cdef int degree = self.subgraph.degree
-        cdef int rank = self.subgraph.rank
+        cdef int basepoint, next_basepoint, old_index, new_index, next_index
+        cdef int degree = self.subgraph.degree, rank = self.subgraph.rank
         cdef int a, b, c
         cdef unsigned char *outies = self.subgraph.outies
         cdef unsigned char *innies = self.subgraph.innies
