@@ -12,43 +12,40 @@ and viewed in the more natural context of covering spaces.
 
 Conventions:
 
-- A finite Cayley complex is a 2-complex with 1 vertex, G edges and
-  finitely many 2-cells.  Each edge is directed and labeled with a
-  positive integer.  The attaching maps of the 2-cells are represented
-  by cyclically reduced words in the edge labels and their negations.
-  A negative label indicates that the edge is traversed opposite to
-  the edge's direction.  These cyclically reduced words are called
-  relations.
+- A finite Cayley complex is a 2-complex with 1 vertex, G edges and finitely
+  many 2-cells.  Each edge is directed and labeled with a positive integer.  The
+  attaching maps of the 2-cells are represented by cyclically reduced words in
+  the edge labels and their negations.  A negative label indicates that the edge
+  is traversed opposite to the edge's direction.  These cyclically reduced words
+  are called relations.
 
-- The vertices of a degree D finite cover of a Cayley complex are
-  indexed as 1, ..., D. The base point is the vertex with index 1.
+- The vertices of a degree D finite cover of a Cayley complex are indexed as
+  1, ..., D. The base point is the vertex with index 1.
 
-- The number R of edge labels is called the rank in the code. That
-  refers to the rank of the free group that would be used in the group
-  presentation associated with the Cayley complex.  Note that when a
-  word is specified the rank must also be specified, since the word is
-  being viewed as representing an element of a specific free group.
+- The number R of edge labels is called the rank in the code. That refers to the
+  rank of the free group that would be used in the group presentation associated
+  with the Cayley complex.  Note that when a word is specified the rank must
+  also be specified, since the word is being viewed as representing an element
+  of a specific free group.
 
-- The 1-skeleton of a cover of a finite Cayley complex is a labeled
-  directed graph in which each vertex has G outgoing edges and G incoming
-  edges, one for each label.  If the cover has degree D then it can
-  be described with a DxG matrix in which the (i, j) entry is the index
-  of the terminal vertex of the edge with initial vertex i and label j.
-  This is called the matrix of outies.  A related DxG matrix, the matrix
-  of innies, is the one for which the (i,j) entry is the index of the
-  initial vertex of the edge with terminal vertex i and label j.  For
-  efficiency we use and maintain both of these, even though they carry
-  the same information. All entries of these matrices will be non-zero.
+- The 1-skeleton of a cover of a finite Cayley complex is a labeled directed
+  graph in which each vertex has G outgoing edges and G incoming edges, one for
+  each label.  If the cover has degree D then it can be described with a DxG
+  matrix in which the (i, j) entry is the index of the terminal vertex of the
+  edge with initial vertex i and label j.  This is called the matrix of outies.
+  A related DxG matrix, the matrix of innies, is the one for which the (i,j)
+  entry is the index of the initial vertex of the edge with terminal vertex i
+  and label j.  For efficiency we use and maintain both of these, even though
+  they carry the same information. All entries of these matrices will be
+  non-zero.
 
-- While constructing covers we need to work with subgraphs of the
-  1-skeletion.  A subgraph can be represented by a DxG matrix in which
-  some of the entries are 0.  The (i,j) entry of the matrix of outties
-  is 0 if and only if there is no edge with initial vertex i and
-  label j in the subgraph.  Similarly, the (i,j) entry of the matrix
-  of innies is 0 if and only if there is no edge with terminal vertex
-  i and label j.  
+- While constructing covers we need to work with subgraphs of the 1-skeletion.
+  A subgraph can be represented by a DxG matrix in which some of the entries are
+  0.  The (i,j) entry of the matrix of outties is 0 if and only if there is no
+  edge with initial vertex i and label j in the subgraph.  Similarly, the (i,j)
+  entry of the matrix of innies is 0 if and only if there is no edge with
+  terminal vertex i and label j.
 """
-
 
 cdef class cWord():
     cdef int rank, start, length, size
@@ -297,93 +294,6 @@ cdef class CoveringSubgraph:
     def __lt__(self, other):
         return self.__key__() < other.__key__()
 
-    def is_minimal(self):
-        result = True
-        for n in range(2, self.degree):
-            perm, next, check = self.expand_perm(n)
-            #print('perm:', perm)
-            old_outies = [self.outies[i] for i in range(self.degree*self.rank)]
-            #print('old:', [self.outies[i] for i in range(self.degree*self.rank)])
-            new_outies = []
-            for v in range(self.degree):
-                for l in range(self.rank):
-                    if perm[v] == 0:
-                        new_outies.append(0)
-                    else:
-                        new_outies.append(perm[self.outies[(perm[v] - 1)*self.rank + l] - 1])
-            #print('new', [new_outies[i] for i in range(self.degree*self.rank)])
-            if new_outies < old_outies:
-                result = False
-                break
-        return result
-
-        # for n in range(1, self.degree):
-        #     try:
-        #         self.expand_perm(n+1, check=True)
-        #     except:
-        #         return False
-        # return True
-
-    def expand_perm(self, int vertex, perm=None, next=None, check=False):
-        if perm is None:
-            # The new basepoint will be named 1
-            perm = [0]*self.degree
-            perm[vertex - 1] = 1
-            next = 2
-            if check:
-                check=1
-        if next > self.degree:
-            #print('Out of indices')
-            return perm, next, check
-        # Examine all of the outgoing edges at a given vertex.
-        # Assign consecutive indices, starting with next, to the
-        # terminal vertices those edges, skipping any of those
-        # endpoints which have already been assigned an index.
-        # If a non-existent edge is found, stop. Otherwise,
-        # recursively visit each of those vertices in order.
-        #print('starting with', perm, next, check)
-        terminals = []
-        for l in range(self.rank):
-            out = self.outies[(vertex - 1)*self.rank + l]
-            if not out:
-                return perm, next, check
-            #print('Checking edge %d--%d-->%d'%(vertex, l+1, out))
-            if not perm[out - 1]:
-                #print('The new index of %d is %d'%(out, next))
-                perm[out - 1] = next
-                if check:
-                    #print('Checking with check =', check)
-                    old_outies = [self.outies[i] for i in range(self.degree*self.rank)]
-                    #print('old:', [self.outies[i] for i in range(self.degree*self.rank)])
-                    new_outies = []
-                    for v in range(self.degree):
-                        for l in range(self.rank):
-                            if perm[v] == 0:
-                                new_outies.append(0)
-                            else:
-                                new_outies.append(perm[self.outies[(perm[v] - 1)*self.rank + l] - 1])
-                    #print('new', [new_outies[i] for i in range(self.degree*self.rank)])
-                    if new_outies < old_outies:
-                        raise NotMinimal
-                    # The outie matrix is minimal up to the vertex with index check.
-                    # See if adding this new vertex will reduce it.
-                    # for l in range(self.rank):
-                    #     old = self.outies[(check - 1)*self.rank + l]
-                    #     new = self.outies[(perm[check - 1] - 1)*self.rank + l]
-                    #     print('old:', old, 'new:', new)
-                    #     if old < new:
-                    #         break
-                    #     if new < old:
-                    #         print('Not minimal')
-                    #         raise NotMinimal
-                    # check += 1
-                next += 1
-                terminals.append(out)
-        for vertex in terminals:
-            #print('Recursing to %s'%vertex)
-            perm, next, check = self.expand_perm(vertex, perm, next, check)
-        return perm, next, check
-
     cpdef is_complete(self):
         return self.num_edges == self.rank*self.degree
 
@@ -480,10 +390,10 @@ cdef class CoveringSubgraph:
 cdef class SimsTree:
     """
     A tree of CoveringSubgraphs constructed by the algorithm.  Each
-    CoveringSubgraph in the tree is constructed by adding edges to
-    its parent in such a way that every relation that can be lifted
-    lifts to a loop.  (It is allowed for a relation to fail to lift
-    because an edge is missing from the subgraph.)
+    CoveringSubgraph in the tree is constructed by adding edges to its parent in
+    such a way that every relation that can be lifted lifts to a loop.  (It is
+    allowed for a relation to fail to lift because an edge is missing from the
+    subgraph.)
     """
     cdef public int rank
     cdef public int max_degree
