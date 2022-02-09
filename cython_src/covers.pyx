@@ -212,55 +212,10 @@ cdef class SimsTree:
         self.bloom()
 
     def __iter__(self):
-        class TreeIterator:
-            """
-            Iterate through all leaf nodes in the tree with complete subgraphs.
-            """
-
-            def __init__(self, SimsTree tree):
-                self.next = tree.root
-                self.path = [0]
-                while self.next.children:
-                    self.path.append(0)
-                    self.next = self.next.children[0]
-                self.done = False
-
-            def __next__(self):
-                cdef SimsNode result
-                if self.done:
-                    raise StopIteration
-                result = self.next
-                try:
-                    self.next = self.next.parent.children[self.path[-1] + 1]
-                    self.path[-1] += 1
-                except AttributeError:
-                    # The root is the only node, so it is a leaf.
-                    self.done = True
-                    return result
-                except IndexError:
-                    while self.next.parent:
-                        self.next = self.next.parent
-                        index = self.path.pop() + 1
-                        if not self.path:
-                            self.done = True
-                        if index < len(self.next.children):
-                            self.path.append(index)
-                            self.next = self.next.children[index]
-                            break
-                    if self.path == [0]:
-                        self.done = True
-                while self.next.children:
-                    self.path.append(0)
-                    self.next = self.next.children[0]
-                return result
-
-        return TreeIterator(self)
+        return SimsTreeIterator(self)
 
     def as_list(self):
         return [n.subgraph for n in self if n.subgraph.is_complete()]
-
-    cdef add_child(self, child):
-        child.parent.children.append(child)
 
     cdef bloom(self):
         cdef SimsNode tip
@@ -271,6 +226,47 @@ cdef class SimsTree:
                 count += tip.sprout()
             if count == 0:
                 break
+
+class SimsTreeIterator:
+    """
+    Iterates through all leaf nodes of a SimsTree.
+    """
+    def __init__(self, SimsTree tree):
+        self.next_node = tree.root
+        self.path = [0]
+        while self.next_node.children:
+            self.path.append(0)
+            self.next_node = self.next_node.children[0]
+        self.done = False
+
+    def __next__(self):
+        cdef SimsNode result
+        if self.done:
+            raise StopIteration
+        result = self.next_node
+        try:
+            self.next_node = self.next_node.parent.children[self.path[-1] + 1]
+            self.path[-1] += 1
+        except AttributeError:
+            # The root is the only node, so it is a leaf.
+            self.done = True
+            return result
+        except IndexError:
+            while self.next_node.parent:
+                self.next_node = self.next_node.parent
+                index = self.path.pop() + 1
+                if not self.path:
+                    self.done = True
+                if index < len(self.next_node.children):
+                    self.path.append(index)
+                    self.next_node = self.next_node.children[index]
+                    break
+            if self.path == [0]:
+                self.done = True
+        while self.next_node.children:
+            self.path.append(0)
+            self.next_node = self.next_node.children[0]
+        return result
 
 cdef class SimsNode:
     """
@@ -286,6 +282,9 @@ cdef class SimsNode:
         self.tree = tree
         self.parent = parent
         self.children = []
+
+    cdef add_child(self, child):
+        child.parent.children.append(child)
 
     cdef sprout(self):
         """
@@ -323,7 +322,7 @@ cdef class SimsNode:
             new_subgraph.add_edge(l, v, n)
             new_leaf = SimsNode(new_subgraph, tree=self.tree, parent=self)
             if new_leaf.keep():
-                self.tree.add_child(new_leaf)
+                self.add_child(new_leaf)
                 count += 1
         return count
 
