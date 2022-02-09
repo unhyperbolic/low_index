@@ -491,16 +491,16 @@ cdef class SimsTree:
     cdef SimsNode next
     cdef char done
     # Workspaces used by SimsNodes when checking minimality
-    cdef unsigned char *new
-    cdef unsigned char *wen
+    cdef unsigned char *old_to_new
+    cdef unsigned char *new_to_old
 
     def __cinit__(self):
-        self.new = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
-        self.wen = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
+        self.old_to_new = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
+        self.new_to_old = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
 
     def __dealloc__(self):
-        PyMem_Free(self.new)
-        PyMem_Free(self.wen)
+        PyMem_Free(self.old_to_new)
+        PyMem_Free(self.new_to_old)
 
     def __init__(self, int rank, int max_degree):
         self.rank = rank
@@ -634,7 +634,7 @@ cdef class SimsNode:
         with rank R and degree D, consider all pairs (N, L) where N is a vertex
         index in [1, D] and L is a signed label in [-R, -1] or [1, R].  Order
         the signed labels as 1, -1, 2, -2, ..., R, -R.  Use that to lex order
-        the 2*D*R pairs (N, L).  For each pair (N,L) assign an edge E(N, L) and
+        the 2*D*R pairs (N, L).  For each pair (N, L) assign an edge E(N, L) and
         a number s(N, L) as follows:
 
             * if L > 0, E(N, L) is the edge with initial vertex N and
@@ -648,11 +648,12 @@ cdef class SimsNode:
 
         Any conjugate of the subgroup corresponding to a covering graph can be
         obtained by changing the basepoint.  A choice of basepoint determines an
-        indexing of the vertices where the index of a vertex v is the index of
-        the first pair (N, L) such that E(N, L) has v as its terminal (initial)
-        vertex if L > 0 (L < 0).  We only enumerate based coverings for which
-        the basepoint is chosen to minimize complexity.  The subgroups
-        corresponding to these coverings will then by unique up to conjugacy.
+        indexing of the vertices where the index of a vertex v is the next
+        available index at the moment when the first E(N, L) having v as its
+        terminal (initial) vertex if L > 0 (L < 0) is added.  We only enumerate
+        based coverings for which the basepoint is chosen to minimize
+        complexity.  The subgroups corresponding to these coverings will then by
+        unique up to conjugacy.
 
         Even when working with a proper subgraph of a covering graph (containing
         the basepoint) it may be possible to deduce that the subgraph cannot be
@@ -667,8 +668,8 @@ cdef class SimsNode:
         edge which would result in a higher complexity. If no such edge is found
         for any choice of basepoint it returns True.
         """
-        cdef unsigned char *old_to_new = self.tree.new
-        cdef unsigned char *new_to_old = self.tree.wen
+        cdef unsigned char *old_to_new = self.tree.old_to_new
+        cdef unsigned char *new_to_old = self.tree.new_to_old
         cdef int basepoint, next_index, old_index, new_index, next_basepoint
         cdef int degree = self.subgraph.degree
         cdef int rank = self.subgraph.rank
@@ -689,7 +690,6 @@ cdef class SimsNode:
                 for n in range(2*rank):
                     sign = n % 2
                     l = n // 2
-                    bail = False
                     # Try to find an incident edge with label l + 1 or -(l + 1).
                     if sign == 0: # positive label
                         a = outies[(new_index - 1)*rank + l] # outgoing to old a
@@ -701,12 +701,12 @@ cdef class SimsNode:
                         # Not enough edges to decide.
                         next_basepoint = True
                         break
-                    #Compare the old and new indices of the other end of the edge
+                    # Update the mappings between the old and new indices.
                     if old_to_new[b] == 0:
-                        # Update the mappings between the old and new indices.
                         next_index += 1
                         old_to_new[b] = next_index
                         new_to_old[next_index] = b
+                    #Compare the old and new indices of the other end of the edge
                     c = old_to_new[b]
                     if c < a:
                         # The new basepoint is better - discard this graph.
