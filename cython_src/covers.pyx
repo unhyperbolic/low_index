@@ -68,7 +68,7 @@ cdef class CoveringSubgraph:
 
     def __str__(self):
         cdef int t
-        result = 'CoveringSubgraph with edges:\n'
+        result = 'Covering graph with edges:\n'
         for f in range(self.degree):
             for n in range(self.rank):
                  t = self.outies[f*self.rank + n]
@@ -187,6 +187,33 @@ cdef class SimsTree:
     interest.  So we actually implement the "tree" as a python list.  In each
     cycle in the loop of the bloom method a new list is generated, replacing
     each node by a list of nodes whose graphs are obtained by adding edges.
+
+>>> from fpgroups import *
+>>> t = SimsTree(rank=1, max_degree=3)
+>>> len(t)
+3
+>>> for g in t.covers(): print(g)
+... 
+Covering graph with edges:
+1--1->1
+Covering graph with edges:
+1--1->2
+2--1->1
+Covering graph with edges:
+1--1->2
+2--1->3
+3--1->1
+>>> t = SimsTree(rank=2, max_degree=3)
+>>> len(t)
+11
+>>> print(t.covers()[7])
+Covering graph with edges:
+1--1->2
+1--2->1
+2--1->3
+2--2->2
+3--1->1
+3--2->3
     """
     cdef int rank
     cdef int max_degree
@@ -206,7 +233,7 @@ cdef class SimsTree:
         PyMem_Free(self.old_to_new)
         PyMem_Free(self.new_to_old)
 
-    def __init__(self, int rank, int max_degree):
+    def __init__(self, int rank=1, int max_degree=1):
         self.rank = rank
         self.max_degree = max_degree
         subgraph=CoveringSubgraph(rank=rank, max_degree=max_degree)
