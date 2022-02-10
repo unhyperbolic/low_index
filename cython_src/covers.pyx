@@ -1,5 +1,6 @@
 """
-Enumerate all covering spaces with bounded degree of a finite Cayley complex.
+Enumerate all based covering spaces with bounded degree of a finite Cayley
+complex such that the basepoint has minimal complexity. 
 
 The algorithm used here is the one presented in "Computations with Finitely
 Presented Groups" by Charles Sims, stripped of all of the irrelevant machinery
@@ -112,13 +113,6 @@ cdef class CoveringSubgraph:
         memcpy(result.outies, self.outies, size)
         memcpy(result.innies, self.innies, size)
         return result
-        
-    cdef check_label(self, n):
-        assert 0 < n <= self.rank or -self.rank <= n < 0, \
-          'Labels must lie in [-{0}, -1] or [1, {0}].'.format(self.rank)
-
-    cdef check_vertex(self, n):
-        assert 0 < n <= self.max_degree, 'vertices must lie in [1, %d]'%self.max_degree
 
     cdef add_edge(self, int letter, int from_vertex, int to_vertex):
         """
@@ -181,17 +175,25 @@ cdef class CoveringSubgraph:
 
 cdef class SimsTree:
     """
-    A tree of CoveringSubgraphs constructed by the algorithm.  Each
+    A "tree" of CoveringSubgraphs constructed by Sims algorithm.  Each
     CoveringSubgraph in the tree is constructed by adding edges to its parent in
     such a way that every relation that can be lifted lifts to a loop.  (It is
     allowed for a relation to fail to lift because an edge is missing from the
     subgraph.)
+
+    Implementation note: The collection of all graphs produced by Sims algorithm
+    can be viewed as a tree, where the children of each node are each obtained
+    by adding edges to the node.  However, only the tips of the tree are of
+    interest.  So we actually implement the "tree" as a python list.  In each
+    cycle in the loop of the bloom method a new list is generated, replacing
+    each node by a list of nodes whose graphs are obtained by adding edges.
     """
-    cdef public int rank
-    cdef public int max_degree
-    cdef public SimsNode root
+    cdef int rank
+    cdef int max_degree
+    cdef SimsNode root
     cdef SimsNode next
     cdef char done
+    cdef public list nodes
     # Workspaces used by SimsNodes when checking minimality
     cdef unsigned char *old_to_new
     cdef unsigned char *new_to_old
@@ -209,98 +211,62 @@ cdef class SimsTree:
         self.max_degree = max_degree
         subgraph=CoveringSubgraph(rank=rank, max_degree=max_degree)
         self.root = SimsNode(subgraph, tree=self)
+        self.nodes = [self.root]
         self.bloom()
 
-    def __iter__(self):
-        return SimsTreeIterator(self)
+    def __len__(self):
+        return len(self.nodes)
 
-    def as_list(self):
-        return [n.subgraph for n in self if n.subgraph.is_complete()]
+    def __iter__(self):
+        return iter(self.nodes)
+
+    def covers(self):
+        return [n.subgraph for n in self.nodes]
 
     cdef bloom(self):
         cdef SimsNode tip
         cdef int count = 0
+        cdef list new_nodes
+        cdef list sprouts
         while True:
             count = 0
+            new_nodes = []
             for tip in self:
-                count += tip.sprout()
+                sprouts = tip.sprout()
+                count += len(sprouts)
+                if sprouts:
+                    new_nodes += sprouts
+                elif tip.subgraph.is_complete():
+                    new_nodes.append(tip)
             if count == 0:
                 break
-
-class SimsTreeIterator:
-    """
-    Iterates through all leaf nodes of a SimsTree.
-    """
-    def __init__(self, SimsTree tree):
-        self.next_node = tree.root
-        self.path = [0]
-        while self.next_node.children:
-            self.path.append(0)
-            self.next_node = self.next_node.children[0]
-        self.done = False
-
-    def __next__(self):
-        cdef SimsNode result
-        if self.done:
-            raise StopIteration
-        result = self.next_node
-        try:
-            self.next_node = self.next_node.parent.children[self.path[-1] + 1]
-            self.path[-1] += 1
-        except AttributeError:
-            # The root is the only node, so it is a leaf.
-            self.done = True
-            return result
-        except IndexError:
-            while self.next_node.parent:
-                self.next_node = self.next_node.parent
-                index = self.path.pop() + 1
-                if not self.path:
-                    self.done = True
-                if index < len(self.next_node.children):
-                    self.path.append(index)
-                    self.next_node = self.next_node.children[index]
-                    break
-            if self.path == [0]:
-                self.done = True
-        while self.next_node.children:
-            self.path.append(0)
-            self.next_node = self.next_node.children[0]
-        return result
+            self.nodes = new_nodes
 
 cdef class SimsNode:
     """
     A node in a SimsTree, containing a based partial covering.
     """
     cdef SimsTree tree
-    cdef public SimsNode parent
-    cdef public list children
     cdef public CoveringSubgraph subgraph
 
     def __init__(self, subgraph, tree=None, parent=None):
         self.subgraph = subgraph
         self.tree = tree
-        self.parent = parent
-        self.children = []
-
-    cdef add_child(self, child):
-        child.parent.children.append(child)
 
     cdef sprout(self):
         """
         Find the first empty edge slot in this based partial covering.  For each
-        possible way to add an edge in that slot, create a child node containing
-        the subgraph obtained by adding that edge.  Return the number of
-        children added.
+        possible way to add an edge in that slot, create a new node containing
+        the subgraph obtained by adding that edge.  Return the list of new nodes.
         """
-        cdef int n, v, l, count
+        cdef int n, v, l
         cdef CoveringSubgraph new_subgraph, g = self.subgraph
-        cdef SimsNode parent, node, new_leaf
-        #assert not self.children, 'Can only sprout from a bud.'
+        cdef SimsNode new_leaf
+        cdef list children = []
         try:
             v, l = g.first_empty_slot()
         except TypeError:
-            return 0
+            return []
         # Add edges with from this slot to all possible target slots.
         targets = []
         if l > 0:
@@ -316,15 +282,13 @@ cdef class SimsNode:
         # Also add an edge to a new vertex if allowed.
         if g.degree < g.max_degree:
             targets.append((l, v, g.degree + 1))
-        count = 0
         for l, v, n in targets:
             new_subgraph = g.clone()
             new_subgraph.add_edge(l, v, n)
             new_leaf = SimsNode(new_subgraph, tree=self.tree, parent=self)
             if new_leaf.keep():
-                self.add_child(new_leaf)
-                count += 1
-        return count
+                children.append(new_leaf)
+        return children
 
     cdef keep(self):
         """
