@@ -188,32 +188,33 @@ cdef class SimsTree:
     cycle in the loop of the bloom method a new list is generated, replacing
     each node by a list of nodes whose graphs are obtained by adding edges.
 
->>> from fpgroups import *
->>> t = SimsTree(rank=1, max_degree=3)
->>> len(t)
-3
->>> for g in t.covers(): print(g)
-... 
-Covering graph with edges:
-1--1->1
-Covering graph with edges:
-1--1->2
-2--1->1
-Covering graph with edges:
-1--1->2
-2--1->3
-3--1->1
->>> t = SimsTree(rank=2, max_degree=3)
->>> len(t)
-11
->>> print(t.covers()[7])
-Covering graph with edges:
-1--1->2
-1--2->1
-2--1->3
-2--2->2
-3--1->1
-3--2->3
+    >>> from fpgroups import *
+    >>> t = SimsTree(rank=1, max_degree=3)
+    >>> len(t)
+    3
+    >>> for g in t.covers(): print(g)
+    ... 
+    Covering graph with edges:
+    1--1->1
+    Covering graph with edges:
+    1--1->2
+    2--1->1
+    Covering graph with edges:
+    1--1->2
+    2--1->3
+    3--1->1
+    >>> t = SimsTree(rank=2, max_degree=3)
+    >>> len(t)
+    11
+    >>> print(t.covers()[7])
+    Covering graph with edges:
+    1--1->2
+    1--2->1
+    2--1->3
+    2--2->2
+    3--1->1
+    3--2->3
+
     """
     cdef int rank
     cdef int max_degree
@@ -221,11 +222,12 @@ Covering graph with edges:
     cdef SimsNode next
     cdef char done
     cdef public list nodes
+    cdef public list relators
     # Workspaces used by SimsNodes when checking minimality
     cdef unsigned char *old_to_new
     cdef unsigned char *new_to_old
 
-    def __cinit__(self):
+    def __cinit__(self,  int rank=1, int max_degree=1, relators=[]):
         self.old_to_new = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
         self.new_to_old = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
 
@@ -233,9 +235,10 @@ Covering graph with edges:
         PyMem_Free(self.old_to_new)
         PyMem_Free(self.new_to_old)
 
-    def __init__(self, int rank=1, int max_degree=1):
+    def __init__(self, int rank=1, int max_degree=1, relators=[]):
         self.rank = rank
         self.max_degree = max_degree
+        self.relators = relators
         subgraph=CoveringSubgraph(rank=rank, max_degree=max_degree)
         self.root = SimsNode(subgraph, tree=self)
         self.nodes = [self.root]

@@ -1,20 +1,23 @@
 """
 Words, reduced words and cyclically reduced words in a free group.
 """
+alphabet = 'ZYXWVUTSRQPONMLKJIHGFEDCBA abcdefghijklnmopqrstuvwxyz'
 
 cdef class cWord():
     cdef int rank, start, length, size
     cdef char* buffer
 
-    def __cinit__(self, int rank, byteseq):
+    def __cinit__(self, int rank, letters):
         self.rank = rank
         self.start = 1
-        self.length = len(byteseq)
+        self.length = len(letters)
         self.size = self.length + 2
         self.buffer = <char *>PyMem_Malloc(self.size)
 
-    def __init__(self, int rank, byteseq):
+    def __init__(self, int rank, letters):
         cdef int x  # GRRR C allows negative chars but Cython doesn't.
+        if isinstance(letters, str):
+            byteseq = [alphabet.index(l) - 26 for l in letters]
         for n in range(len(byteseq)):
             x = byteseq[n]
             x = x if x < 128 else x - 256  # GRRR No negative chars in Cython.
@@ -32,13 +35,16 @@ cdef class cWord():
         return self.length
 
     def __repr__(self):
-        return 'cWord(%s)'%str(self)
+        return 'cWord(%d, %s)'%(
+            self.rank,
+            [x if x < 128 else x - 256 for x in
+                 self.buffer[self.start:self.start + self.length]])
 
     def __str__(self):
         word = []
         for i in range(self.start, self.start + self.length):
-            word.append(self.buffer[i])
-        return str(word)
+            word.append(alphabet[self.buffer[i] + 26])
+        return ''.join(word)
 
     cdef repack(self):
         cdef char *old = self.buffer
@@ -66,6 +72,8 @@ cdef class cWord():
                 continue
             head += 1
             self.buffer[head] = self.buffer[tail]
+        if head < tail:
+            self.buffer[head + 1] = self.buffer[tail]
 
     cdef cyclically_reduce(self):
         """
@@ -84,8 +92,8 @@ cdef class cWord():
 
 cdef class ReducedWord(cWord):
 
-    def __init__(self, int rank, byteseq):
-        cWord.__init__(self, rank, byteseq)
+    def __init__(self, int rank, letters):
+        cWord.__init__(self, rank, letters)
         cWord.reduce(self)
 
     cdef _next_letter(self, int n):
