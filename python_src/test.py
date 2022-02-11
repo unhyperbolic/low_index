@@ -12,9 +12,15 @@ def fix_module_doctest(module):
     module.__test__ = {}
     for name in dir(module):
         value = getattr(module, name)
+        # Avoid duplicate tests for python classes.
+        try:
+            if value.__module__ == module.__name__:
+                continue
+        except AttributeError:
+            pass
         if inspect.isclass(value) or inspect.isfunction(value):
             if value.__doc__ and isinstance(value.__doc__, str):
-                print('Running doctests for', name)
+                print('Including doctests for Cython class %s.'%name)
                 module.__test__[name] = value.__doc__
 
 def doctest_module(module, verbose=False):
@@ -32,5 +38,5 @@ def doctest_module(module, verbose=False):
     attempted += result.attempted
     print(result)
 
-def runtests():
-    doctest_module(fpgroups)
+def runtests(verbose=False):
+    doctest_module(fpgroups, verbose=verbose)

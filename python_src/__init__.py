@@ -6,6 +6,22 @@ def version():
     return __version__
 
 class FreeGroup:
+    """
+    A free group of specified rank.
+
+    >>> from fpgroups import *
+    >>> F4 = FreeGroup(rank=4)
+    >>> w = F4('abcDDDdc')
+    >>> w
+    Word([1, 2, 3, -4, -4, 3], rank=4)
+    >>> print(w)
+    abcDDc
+    >>> v = F4('ababab')
+    >>> v*w
+    Word([1, 2, 1, 2, 1, 2, 1, 2, 3, -4, -4, 3], rank=4)
+    >>> print(v*w)
+    ababababcDDc
+    """
     groups = {}
 
     def __new__(cls, *, rank):
