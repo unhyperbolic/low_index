@@ -3,21 +3,25 @@ Words, reduced words and cyclically reduced words in a free group.
 """
 alphabet = 'ZYXWVUTSRQPONMLKJIHGFEDCBA abcdefghijklnmopqrstuvwxyz'
 
-cdef class cWord():
+cdef class Word():
     cdef int rank, start, length, size
     cdef char* buffer
 
-    def __cinit__(self, int rank, letters):
+    def __cinit__(self, letters, int rank=0):
         self.rank = rank
         self.start = 1
         self.length = len(letters)
         self.size = self.length + 2
         self.buffer = <char *>PyMem_Malloc(self.size)
 
-    def __init__(self, int rank, letters):
+    def __init__(self, letters, int rank=0):
         cdef int x  # GRRR C allows negative chars but Cython doesn't.
+        if rank == 0:
+            raise ValueError('The rank must be a positive integer')
         if isinstance(letters, str):
             byteseq = [alphabet.index(l) - 26 for l in letters]
+        else:
+            byteseq = bytes(letters)
         for n in range(len(byteseq)):
             x = byteseq[n]
             x = x if x < 128 else x - 256  # GRRR No negative chars in Cython.
@@ -35,10 +39,10 @@ cdef class cWord():
         return self.length
 
     def __repr__(self):
-        return 'cWord(%d, %s)'%(
-            self.rank,
+        return 'Word(%s, rank=%d)'%(
             [x if x < 128 else x - 256 for x in
-                 self.buffer[self.start:self.start + self.length]])
+                 self.buffer[self.start:self.start + self.length]],
+            self.rank)
 
     def __str__(self):
         word = []
@@ -90,11 +94,11 @@ cdef class cWord():
                 break
         self.start = start
 
-cdef class ReducedWord(cWord):
+cdef class ReducedWord(Word):
 
-    def __init__(self, int rank, letters):
-        cWord.__init__(self, rank, letters)
-        cWord.reduce(self)
+    def __init__(self, letters, int rank=0):
+        Word.__init__(self, letters, rank)
+        Word.reduce(self)
 
     cdef _next_letter(self, int n):
         if n > 0:
@@ -161,9 +165,9 @@ cdef class ReducedWord(cWord):
 
     def __copy__(self):
         if self.length == 0:
-            return ReducedWord(self.rank, [])
-        return ReducedWord(self.rank,
-            self.buffer[self.start:self.start + self.length])
+            return ReducedWord('', self.rank)
+        return ReducedWord(
+            self.buffer[self.start:self.start + self.length], self.rank)
 
 cdef class ReducedWords:
     """
@@ -178,7 +182,7 @@ cdef class ReducedWords:
         if start:
             self.current = start
         else:
-            self.current = ReducedWord(rank, [])
+            self.current = ReducedWord('', rank)
 
     def __next__(self):
         if self.current.length > self.max_length:
@@ -192,6 +196,6 @@ cdef class ReducedWords:
 
 cdef class CyclicallyReducedWord(ReducedWord):
 
-    def __init__(self, int rank, byteseq):
-        ReducedWord.__init__(self, rank, byteseq)
-        cWord.cyclically_reduce(self)            
+    def __init__(self, letters, int rank=0):
+        ReducedWord.__init__(self, letters, rank)
+        Word.cyclically_reduce(self)            
