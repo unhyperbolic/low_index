@@ -4,17 +4,18 @@ Words, reduced words and cyclically reduced words in a free group.
 alphabet = 'ZYXWVUTSRQPONMLKJIHGFEDCBA abcdefghijklnmopqrstuvwxyz'
 
 cdef class Word():
-    cdef int rank, start, length, size
+    cdef public int rank, length
+    cdef int start, size
     cdef char* buffer
 
-    def __cinit__(self, letters, int rank=0):
+    def __cinit__(self, letters, int rank=0, int extra_space=0):
         self.rank = rank
         self.start = 1
         self.length = len(letters)
-        self.size = self.length + 2
+        self.size = self.length + 2 + extra_space
         self.buffer = <char *>PyMem_Malloc(self.size)
 
-    def __init__(self, letters, int rank=0):
+    def __init__(self, letters, int rank=0, int extra_space=0):
         cdef int x  # GRRR C allows negative chars but Cython doesn't.
         if rank == 0:
             raise ValueError('The rank must be a positive integer')
@@ -49,6 +50,24 @@ cdef class Word():
         for i in range(self.start, self.start + self.length):
             word.append(alphabet[self.buffer[i] + 26])
         return ''.join(word)
+
+    cdef _cat(self, Word other, Word answer):
+        cdef int index = answer.start
+        assert answer.size >= answer.start + self.length + other.length
+        for i in range(self.length):
+            answer.buffer[index] = self.buffer[self.start + i]
+            index += 1
+        for i in range(other.length):
+            answer.buffer[index] = other.buffer[other.start + i]
+            index += 1
+        answer.length = self.length + other.length
+        return answer
+
+    def __mul__(self, Word other):
+        cdef int size = self.length + other.length
+        cdef Word answer = Word('', rank=self.rank, extra_space=size)
+        Word._cat(self, other, answer)
+        return answer
 
     cdef repack(self):
         cdef char *old = self.buffer
@@ -96,7 +115,7 @@ cdef class Word():
 
 cdef class ReducedWord(Word):
 
-    def __init__(self, letters, int rank=0):
+    def __init__(self, letters, int rank=0, int extra_space=0):
         Word.__init__(self, letters, rank)
         Word.reduce(self)
 
@@ -169,6 +188,13 @@ cdef class ReducedWord(Word):
         return ReducedWord(
             self.buffer[self.start:self.start + self.length], self.rank)
 
+    def __mul__(self, ReducedWord other):
+        cdef int size = self.length + other.length
+        cdef ReducedWord answer = ReducedWord('', rank=self.rank, extra_space=size)
+        Word._cat(self, other, answer)
+        answer.reduce()
+        return answer
+
 cdef class ReducedWords:
     """
     Iterator for reduced words of a given rank with bounded length.
@@ -196,6 +222,10 @@ cdef class ReducedWords:
 
 cdef class CyclicallyReducedWord(ReducedWord):
 
-    def __init__(self, letters, int rank=0):
-        ReducedWord.__init__(self, letters, rank)
+    def __init__(self, letters, int rank=0, int extra_space=0):
+        ReducedWord.__init__(self, letters, rank, extra_space)
         Word.cyclically_reduce(self)            
+
+    def __mul__(self, other):
+        raise ValueError('CyclicallyReducedWords do not form a semigroup.')
+
