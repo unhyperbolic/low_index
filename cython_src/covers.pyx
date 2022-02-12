@@ -312,9 +312,9 @@ cdef class SimsTree:
     Implementation note: The collection of all graphs produced by Sims algorithm
     can be viewed as a tree, where the children of each node are each obtained
     by adding edges to the node.  However, only the tips of the tree are of
-    interest.  So we actually implement the "tree" as a python list.  In each
-    cycle in the loop of the bloom method a new list is generated, replacing
-    each node by a list of nodes whose graphs are obtained by adding edges.
+    interest.  So we actually implement the "tree" as a python list.  Each
+    pass through the loop in the bloom method generates a new list by replacing
+    each subgraph by a list of subgraphs obtained by adding edges.
 
     >>> from fpgroups import *
     >>> t = SimsTree(rank=1, max_degree=3)
