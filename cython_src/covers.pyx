@@ -1,6 +1,6 @@
 """
 Enumerate all based covering spaces with bounded degree of a finite Cayley
-complex such that the basepoint has minimal complexity. 
+complex such that the basepoint has minimal complexity.
 
 The algorithm used here is the one presented in "Computations with Finitely
 Presented Groups" by Charles Sims, stripped of all of the irrelevant machinery
@@ -50,7 +50,7 @@ cdef class CoveringSubgraph:
     cdef int num_edges
     cdef unsigned char* outies
     cdef unsigned char* innies
-    
+
     def __cinit__(self, rank, max_degree):
         self.degree = 1
         self.num_edges = 0
@@ -79,7 +79,7 @@ cdef class CoveringSubgraph:
     def _data(self):
         print('out:', [n for n in self.outies[:self.rank*self.degree]])
         print('in:', [n for n in self.innies[:self.rank*self.degree]])
-        
+
     def __copy__(self):
         return self.clone()
 
@@ -163,14 +163,17 @@ cdef class CoveringSubgraph:
 
     cdef first_empty_slot(self, int basepoint=1):
         cdef int v, l
+        cdef div_t qr
         for n in range(self.rank*self.degree):
             if self.outies[n] == 0:
-                v = n // self.rank
-                l = n % self.rank
+                qr = div(n, self.rank)
+                v = qr.quot
+                l = qr.rem
                 return v + 1, l + 1
             if self.innies[n] == 0:
-                v = n // self.rank
-                l = n % self.rank
+                qr = div(n, self.rank)
+                v = qr.quot
+                l = qr.rem
                 return v + 1, -(l + 1)
 
     cdef sprout(self, SimsTree tree):
@@ -264,7 +267,8 @@ cdef class CoveringSubgraph:
         cdef unsigned char *innies = self.innies
         for basepoint in range(2, degree + 1):
             memset(old_to_new, 0, degree + 1)
-            memset(new_to_old, 0, degree + 1)
+            # It is not necessary to clear new_to_old
+            #memset(new_to_old, 0, degree + 1)
             next_basepoint = 0
             # Attempt to find the indexing determined by this basepoint.
             next_index = 1
@@ -272,10 +276,9 @@ cdef class CoveringSubgraph:
             new_to_old[1] = basepoint
             for new_index in range(1, degree + 1):
                 old_index = new_to_old[new_index]
-                assert old_index != 0
                 for n in range(2*rank):
-                    sign = n % 2
-                    l = n // 2
+                    sign = n & 0x1
+                    l = n >> 1
                     # Try to find an incident edge with label l + 1 or -(l + 1).
                     if sign == 0: # positive label
                         a = outies[(new_index - 1)*rank + l] # outgoing to old a
@@ -324,8 +327,8 @@ cdef class SimsTree:
     >>> t = SimsTree(rank=1, max_degree=3)
     >>> len(t)
     3
-    >>> for g in t.covers(): print(g)
-    ... 
+    >>> for g in t: print(g)
+    ...
     Covering graph with edges:
     1--1->1
     Covering graph with edges:
@@ -338,7 +341,7 @@ cdef class SimsTree:
     >>> t = SimsTree(rank=2, max_degree=3)
     >>> len(t)
     11
-    >>> print(t.covers()[7])
+    >>> print(t[7])
     Covering graph with edges:
     1--1->2
     1--2->1
@@ -377,6 +380,9 @@ cdef class SimsTree:
     def __len__(self):
         return len(self.nodes)
 
+    def __getitem__(self, index):
+        return self.nodes[index]
+
     def __iter__(self):
         return iter(self.nodes)
 
@@ -398,4 +404,3 @@ cdef class SimsTree:
             if count == 0:
                 break
             self.nodes = new_nodes
-
