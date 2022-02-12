@@ -179,7 +179,7 @@ cdef class CoveringSubgraph:
         possible way to add an edge in that slot, create a new node containing
         the subgraph obtained by adding that edge.  Return the list of new nodes.
         """
-        cdef int n, v, l
+        cdef int n, v, l, i, rank=self.rank
         cdef CoveringSubgraph new_subgraph
         cdef list children = []
         try:
@@ -189,13 +189,17 @@ cdef class CoveringSubgraph:
         # Add edges with from this slot to all possible target slots.
         targets = []
         if l > 0:
+            i = 0
             for n in range(self.degree):
-                t = self.innies[n*self.rank + l - 1]
+                t = self.innies[i + l - 1]
+                i += rank
                 if t == 0:
                     targets.append((l, v, n+1))
         else:
+            i = 0
             for n in range(self.degree):
-                t = self.outies[n*self.rank - l - 1]
+                t = self.outies[i - l - 1]
+                i += rank
                 if t == 0:
                     targets.append((l, v, n+1))
         # Also add an edge to a new vertex if allowed.
