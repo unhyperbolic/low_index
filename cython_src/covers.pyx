@@ -129,23 +129,11 @@ cdef class CoveringSubgraph:
         self.innies[in_index] = from_vertex
         self.num_edges += 1
 
-    cdef inline act_by(self, int letter, int vertex):
+    cdef act_by(self, int letter, int vertex):
         if letter > 0:
             return self.outies[(vertex - 1)*self.rank + letter - 1]
         elif letter < 0:
             return self.innies[(vertex - 1)*self.rank - letter - 1]
-
-    cdef first_empty_slot(self, int basepoint=1):
-        cdef int v, l
-        for n in range(self.rank*self.degree):
-            if self.outies[n] == 0:
-                v = n // self.rank
-                l = n % self.rank
-                return v + 1, l + 1
-            if self.innies[n] == 0:
-                v = n // self.rank
-                l = n % self.rank
-                return v + 1, -(l + 1)
 
     cpdef lift(self, ReducedWord word, int vertex):
         cdef int initial = vertex
@@ -173,113 +161,17 @@ cdef class CoveringSubgraph:
             length += 1
         return saved, length
 
-cdef class SimsTree:
-    """
-    A "tree" of CoveringSubgraphs constructed by Sims algorithm.  Each
-    CoveringSubgraph in the tree is constructed by adding edges to its parent in
-    such a way that every relation that can be lifted lifts to a loop.  (It is
-    allowed for a relation to fail to lift because an edge is missing from the
-    subgraph.)
-
-    Implementation note: The collection of all graphs produced by Sims algorithm
-    can be viewed as a tree, where the children of each node are each obtained
-    by adding edges to the node.  However, only the tips of the tree are of
-    interest.  So we actually implement the "tree" as a python list.  In each
-    cycle in the loop of the bloom method a new list is generated, replacing
-    each node by a list of nodes whose graphs are obtained by adding edges.
-
-    >>> from fpgroups import *
-    >>> t = SimsTree(rank=1, max_degree=3)
-    >>> len(t)
-    3
-    >>> for g in t.covers(): print(g)
-    ... 
-    Covering graph with edges:
-    1--1->1
-    Covering graph with edges:
-    1--1->2
-    2--1->1
-    Covering graph with edges:
-    1--1->2
-    2--1->3
-    3--1->1
-    >>> t = SimsTree(rank=2, max_degree=3)
-    >>> len(t)
-    11
-    >>> print(t.covers()[7])
-    Covering graph with edges:
-    1--1->2
-    1--2->1
-    2--1->3
-    2--2->2
-    3--1->1
-    3--2->3
-
-    """
-    cdef int rank
-    cdef int max_degree
-    cdef SimsNode root
-    cdef SimsNode next
-    cdef char done
-    cdef public list nodes
-    cdef public list relators
-    # Workspaces used by SimsNodes when checking minimality
-    cdef unsigned char *old_to_new
-    cdef unsigned char *new_to_old
-
-    def __cinit__(self,  int rank=1, int max_degree=1, relators=[]):
-        self.old_to_new = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
-        self.new_to_old = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
-
-    def __dealloc__(self):
-        PyMem_Free(self.old_to_new)
-        PyMem_Free(self.new_to_old)
-
-    def __init__(self, int rank=1, int max_degree=1, relators=[]):
-        self.rank = rank
-        self.max_degree = max_degree
-        self.relators = relators
-        subgraph=CoveringSubgraph(rank=rank, max_degree=max_degree)
-        self.root = SimsNode(subgraph)
-        self.nodes = [self.root]
-        self.bloom()
-
-    def __len__(self):
-        return len(self.nodes)
-
-    def __iter__(self):
-        return iter(self.nodes)
-
-    def covers(self):
-        return [n.subgraph for n in self.nodes]
-
-    cdef bloom(self):
-        cdef SimsNode tip
-        cdef int count = 0
-        cdef list new_nodes
-        cdef list sprouts
-        while True:
-            count = 0
-            new_nodes = []
-            for tip in self:
-                sprouts = tip.sprout(self)
-                count += len(sprouts)
-                if sprouts:
-                    new_nodes += sprouts
-                elif tip.subgraph.is_complete():
-                    new_nodes.append(tip)
-            if count == 0:
-                break
-            self.nodes = new_nodes
-
-cdef class SimsNode:
-    """
-    A node in a SimsTree, containing a based partial covering.
-    """
-    cdef public CoveringSubgraph subgraph
-
-    def __init__(self, subgraph):
-        self.subgraph = subgraph
+    cdef first_empty_slot(self, int basepoint=1):
+        cdef int v, l
+        for n in range(self.rank*self.degree):
+            if self.outies[n] == 0:
+                v = n // self.rank
+                l = n % self.rank
+                return v + 1, l + 1
+            if self.innies[n] == 0:
+                v = n // self.rank
+                l = n % self.rank
+                return v + 1, -(l + 1)
 
     cdef sprout(self, SimsTree tree):
         """
@@ -288,34 +180,32 @@ cdef class SimsNode:
         the subgraph obtained by adding that edge.  Return the list of new nodes.
         """
         cdef int n, v, l
-        cdef CoveringSubgraph new_subgraph, g = self.subgraph
-        cdef SimsNode new_leaf
+        cdef CoveringSubgraph new_subgraph
         cdef list children = []
         try:
-            v, l = g.first_empty_slot()
+            v, l = self.first_empty_slot()
         except TypeError:
             return []
         # Add edges with from this slot to all possible target slots.
         targets = []
         if l > 0:
-            for n in range(g.degree):
-                t = g.innies[n*g.rank + l - 1]
+            for n in range(self.degree):
+                t = self.innies[n*self.rank + l - 1]
                 if t == 0:
                     targets.append((l, v, n+1))
         else:
-            for n in range(g.degree):
-                t = g.outies[n*g.rank - l - 1]
+            for n in range(self.degree):
+                t = self.outies[n*self.rank - l - 1]
                 if t == 0:
                     targets.append((l, v, n+1))
         # Also add an edge to a new vertex if allowed.
-        if g.degree < g.max_degree:
-            targets.append((l, v, g.degree + 1))
+        if self.degree < self.max_degree:
+            targets.append((l, v, self.degree + 1))
         for l, v, n in targets:
-            new_subgraph = g.clone()
+            new_subgraph = self.clone()
             new_subgraph.add_edge(l, v, n)
-            new_leaf = SimsNode(new_subgraph)
-            if new_leaf.keep(tree):
-                children.append(new_leaf)
+            if new_subgraph.keep(tree):
+                children.append(new_subgraph)
         return children
 
     cdef keep(self, SimsTree tree):
@@ -364,10 +254,10 @@ cdef class SimsNode:
         cdef unsigned char *old_to_new = tree.old_to_new
         cdef unsigned char *new_to_old = tree.new_to_old
         cdef int basepoint, next_basepoint, old_index, new_index, next_index
-        cdef int degree = self.subgraph.degree, rank = self.subgraph.rank
+        cdef int degree = self.degree, rank = self.rank
         cdef int a, b, c
-        cdef unsigned char *outies = self.subgraph.outies
-        cdef unsigned char *innies = self.subgraph.innies
+        cdef unsigned char *outies = self.outies
+        cdef unsigned char *innies = self.innies
         for basepoint in range(2, degree + 1):
             memset(old_to_new, 0, degree + 1)
             memset(new_to_old, 0, degree + 1)
@@ -410,3 +300,98 @@ cdef class SimsNode:
                 if next_basepoint:
                     break
         return True
+
+cdef class SimsTree:
+    """
+    A "tree" of CoveringSubgraphs constructed by Sims algorithm.  Each
+    CoveringSubgraph in the tree is constructed by adding edges to its parent in
+    such a way that every relation that can be lifted lifts to a loop.  (It is
+    allowed for a relation to fail to lift because an edge is missing from the
+    subgraph.)
+
+    Implementation note: The collection of all graphs produced by Sims algorithm
+    can be viewed as a tree, where the children of each node are each obtained
+    by adding edges to the node.  However, only the tips of the tree are of
+    interest.  So we actually implement the "tree" as a python list.  In each
+    cycle in the loop of the bloom method a new list is generated, replacing
+    each node by a list of nodes whose graphs are obtained by adding edges.
+
+    >>> from fpgroups import *
+    >>> t = SimsTree(rank=1, max_degree=3)
+    >>> len(t)
+    3
+    >>> for g in t.covers(): print(g)
+    ... 
+    Covering graph with edges:
+    1--1->1
+    Covering graph with edges:
+    1--1->2
+    2--1->1
+    Covering graph with edges:
+    1--1->2
+    2--1->3
+    3--1->1
+    >>> t = SimsTree(rank=2, max_degree=3)
+    >>> len(t)
+    11
+    >>> print(t.covers()[7])
+    Covering graph with edges:
+    1--1->2
+    1--2->1
+    2--1->3
+    2--2->2
+    3--1->1
+    3--2->3
+
+    """
+    cdef int rank
+    cdef int max_degree
+    cdef CoveringSubgraph root
+    cdef char done
+    cdef public list nodes
+    cdef public list relators
+    # Workspaces used by CoveringSubgraphs when checking minimality
+    cdef unsigned char *old_to_new
+    cdef unsigned char *new_to_old
+
+    def __cinit__(self,  int rank=1, int max_degree=1, relators=[]):
+        self.old_to_new = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
+        self.new_to_old = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
+
+    def __dealloc__(self):
+        PyMem_Free(self.old_to_new)
+        PyMem_Free(self.new_to_old)
+
+    def __init__(self, int rank=1, int max_degree=1, relators=[]):
+        self.rank = rank
+        self.max_degree = max_degree
+        self.relators = relators
+        self.root = CoveringSubgraph(rank=rank, max_degree=max_degree)
+        self.nodes = [self.root]
+        self.bloom()
+
+    def __len__(self):
+        return len(self.nodes)
+
+    def __iter__(self):
+        return iter(self.nodes)
+
+    cdef bloom(self):
+        cdef CoveringSubgraph tip
+        cdef int count = 0
+        cdef list new_nodes
+        cdef list sprouts
+        while True:
+            count = 0
+            new_nodes = []
+            for tip in self:
+                sprouts = tip.sprout(self)
+                count += len(sprouts)
+                if sprouts:
+                    new_nodes += sprouts
+                elif tip.is_complete():
+                    new_nodes.append(tip)
+            if count == 0:
+                break
+            self.nodes = new_nodes
+
