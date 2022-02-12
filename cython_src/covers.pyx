@@ -240,7 +240,7 @@ cdef class SimsTree:
         self.max_degree = max_degree
         self.relators = relators
         subgraph=CoveringSubgraph(rank=rank, max_degree=max_degree)
-        self.root = SimsNode(subgraph, tree=self)
+        self.root = SimsNode(subgraph)
         self.nodes = [self.root]
         self.bloom()
 
@@ -262,7 +262,7 @@ cdef class SimsTree:
             count = 0
             new_nodes = []
             for tip in self:
-                sprouts = tip.sprout()
+                sprouts = tip.sprout(self)
                 count += len(sprouts)
                 if sprouts:
                     new_nodes += sprouts
@@ -276,14 +276,12 @@ cdef class SimsNode:
     """
     A node in a SimsTree, containing a based partial covering.
     """
-    cdef SimsTree tree
     cdef public CoveringSubgraph subgraph
 
-    def __init__(self, subgraph, tree=None, parent=None):
+    def __init__(self, subgraph):
         self.subgraph = subgraph
-        self.tree = tree
 
-    cdef sprout(self):
+    cdef sprout(self, SimsTree tree):
         """
         Find the first empty edge slot in this based partial covering.  For each
         possible way to add an edge in that slot, create a new node containing
@@ -315,12 +313,12 @@ cdef class SimsNode:
         for l, v, n in targets:
             new_subgraph = g.clone()
             new_subgraph.add_edge(l, v, n)
-            new_leaf = SimsNode(new_subgraph, tree=self.tree, parent=self)
-            if new_leaf.keep():
+            new_leaf = SimsNode(new_subgraph)
+            if new_leaf.keep(tree):
                 children.append(new_leaf)
         return children
 
-    cdef keep(self):
+    cdef keep(self, SimsTree tree):
         """
         Return False if the subgraph can provably not be extended to a cover
         which is minimal in its conjugacy class, True otherwise.
@@ -363,8 +361,8 @@ cdef class SimsNode:
         edge which would result in a higher complexity. If no such edge is found
         for any choice of basepoint it returns True.
         """
-        cdef unsigned char *old_to_new = self.tree.old_to_new
-        cdef unsigned char *new_to_old = self.tree.new_to_old
+        cdef unsigned char *old_to_new = tree.old_to_new
+        cdef unsigned char *new_to_old = tree.new_to_old
         cdef int basepoint, next_basepoint, old_index, new_index, next_index
         cdef int degree = self.subgraph.degree, rank = self.subgraph.rank
         cdef int a, b, c
