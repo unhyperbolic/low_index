@@ -28,63 +28,77 @@ Conventions:
   graph in which each vertex has G outgoing edges and G incoming edges, one for
   each label.  If the cover has degree D then it can be described with a DxG
   matrix in which the (i, j) entry is the index of the terminal vertex of the
-  edge with initial vertex i and label j.  This is called the matrix of outies.
-  A related DxG matrix, the matrix of innies, is the one for which the (i,j)
+  edge with initial vertex i and label j.  This is the outgoing matrix.
+  A related DxG matrix, the incoming matrix, is the one for which the (i,j)
   entry is the index of the initial vertex of the edge with terminal vertex i
   and label j.  For efficiency we use and maintain both of these, even though
   they carry the same information. All entries of these matrices will be
-  non-zero.
+  non-zero in a complete covering graph.
 
 - While constructing covers we need to work with subgraphs of the 1-skeletion.
   A subgraph can be represented by a DxG matrix in which some of the entries are
   0.  The (i,j) entry of the matrix of outties is 0 if and only if there is no
   edge with initial vertex i and label j in the subgraph.  Similarly, the (i,j)
-  entry of the matrix of innies is 0 if and only if there is no edge with
+  entry of the matrix of incoming is 0 if and only if there is no edge with
   terminal vertex i and label j.
 """
 
 cdef class CoveringSubgraph:
-    cdef int rank
-    cdef int degree
-    cdef int max_degree
+    cdef public int rank
+    cdef public int degree
+    cdef public int max_degree
     cdef int num_edges
-    cdef unsigned char* outies
-    cdef unsigned char* innies
+    cdef int num_relators
+    cdef unsigned char* outgoing
+    cdef unsigned char* incoming
+    cdef unsigned char* lift_indices
+    cdef unsigned char* lift_vertices
 
-    def __cinit__(self, rank, max_degree):
+    def __cinit__(self, int rank, int max_degree, int num_relators=0):
         self.degree = 1
         self.num_edges = 0
         self.rank = rank
         self.max_degree = max_degree
+        self.num_relators = num_relators
         cdef int size = self.rank*self.max_degree
-        self.outies = <unsigned char *>PyMem_Malloc(size)
-        memset(self.outies, 0, size)
-        self.innies = <unsigned char *>PyMem_Malloc(size)
-        memset(self.innies, 0, size)
+        self.outgoing = <unsigned char *>PyMem_Malloc(size)
+        memset(self.outgoing, 0, size)
+        self.incoming = <unsigned char *>PyMem_Malloc(size)
+        memset(self.incoming, 0, size)
+        if num_relators > 0:
+            # maintain state for each relator at each vertex
+            size = num_relators*max_degree
+            self.lift_indices = <unsigned char *>PyMem_Malloc(size)
+            memset(self.lift_indices, 0, size)
+            self.lift_vertices = <unsigned char *>PyMem_Malloc(size)
+            memset(self.lift_vertices, 0, size)
 
     def __dealloc__(self):
-        PyMem_Free(self.outies)
-        PyMem_Free(self.innies)
+        PyMem_Free(self.outgoing)
+        PyMem_Free(self.incoming)
+        if self.num_relators:
+            PyMem_Free(self.lift_indices)
+            PyMem_Free(self.lift_vertices)
 
     def __str__(self):
         cdef int t
         result = 'Covering graph with edges:\n'
         for f in range(self.degree):
             for n in range(self.rank):
-                 t = self.outies[f*self.rank + n]
+                 t = self.outgoing[f*self.rank + n]
                  if t:
                      result += '%d--%d->%d\n'%(f + 1, n + 1, t)
         return result[:-1]
 
     def _data(self):
-        print('out:', [n for n in self.outies[:self.rank*self.degree]])
-        print('in:', [n for n in self.innies[:self.rank*self.degree]])
+        print('out:', [n for n in self.outgoing[:self.rank*self.degree]])
+        print('in:', [n for n in self.incoming[:self.rank*self.degree]])
 
     def __copy__(self):
         return self.clone()
 
     def __key__(self):
-        return self.outies[:self.rank*self.degree]
+        return self.outgoing[:self.rank*self.degree]
 
     def __hash__(self):
         return hash(self.__key__())
@@ -95,7 +109,7 @@ cdef class CoveringSubgraph:
         if self.degree != other.degree:
             return False
         for i in range(self.rank*self.degree):
-            if self.outies[i] != other.outies[i]:
+            if self.outgoing[i] != other.outgoing[i]:
                 return False
         return True
 
@@ -107,11 +121,17 @@ cdef class CoveringSubgraph:
 
     cdef clone(self):
         cdef int size = self.rank*self.max_degree
-        result = CoveringSubgraph(self.rank, self.max_degree)
+        result = CoveringSubgraph(self.rank, self.max_degree,
+                                      self.num_relators)
         result.degree = self.degree
         result.num_edges = self.num_edges
-        memcpy(result.outies, self.outies, size)
-        memcpy(result.innies, self.innies, size)
+        result.num_relators = self.num_relators
+        memcpy(result.outgoing, self.outgoing, size)
+        memcpy(result.incoming, self.incoming, size)
+        if self.num_relators > 0:
+            size = self.num_relators
+            memcpy(result.lift_indices, self.lift_indices, size)
+            memcpy(result.lift_vertices, self.lift_vertices, size)
         return result
 
     cdef add_edge(self, int letter, int from_vertex, int to_vertex):
@@ -125,15 +145,15 @@ cdef class CoveringSubgraph:
             self.degree += 1
         out_index = (from_vertex - 1)*self.rank + label - 1
         in_index = (to_vertex - 1)*self.rank + label - 1
-        self.outies[out_index] = to_vertex
-        self.innies[in_index] = from_vertex
+        self.outgoing[out_index] = to_vertex
+        self.incoming[in_index] = from_vertex
         self.num_edges += 1
 
     cdef act_by(self, int letter, int vertex):
         if letter > 0:
-            return self.outies[(vertex - 1)*self.rank + letter - 1]
+            return self.outgoing[(vertex - 1)*self.rank + letter - 1]
         elif letter < 0:
-            return self.innies[(vertex - 1)*self.rank - letter - 1]
+            return self.incoming[(vertex - 1)*self.rank - letter - 1]
 
     cpdef lift(self, ReducedWord word, int vertex):
         cdef int initial = vertex
@@ -165,12 +185,12 @@ cdef class CoveringSubgraph:
         cdef int v, l
         cdef div_t qr
         for n in range(self.rank*self.degree):
-            if self.outies[n] == 0:
+            if self.outgoing[n] == 0:
                 qr = div(n, self.rank)
                 v = qr.quot
                 l = qr.rem
                 return v + 1, l + 1
-            if self.innies[n] == 0:
+            if self.incoming[n] == 0:
                 qr = div(n, self.rank)
                 v = qr.quot
                 l = qr.rem
@@ -194,14 +214,14 @@ cdef class CoveringSubgraph:
         if l > 0:
             i = 0
             for n in range(self.degree):
-                t = self.innies[i + l - 1]
+                t = self.incoming[i + l - 1]
                 i += rank
                 if t == 0:
                     targets.append((l, v, n+1))
         else:
             i = 0
             for n in range(self.degree):
-                t = self.outies[i - l - 1]
+                t = self.outgoing[i - l - 1]
                 i += rank
                 if t == 0:
                     targets.append((l, v, n+1))
@@ -211,9 +231,60 @@ cdef class CoveringSubgraph:
         for l, v, n in targets:
             new_subgraph = self.clone()
             new_subgraph.add_edge(l, v, n)
-            if new_subgraph.keep(tree):
+            if (self.relators_may_lift(new_subgraph, tree)
+                    and new_subgraph.keep(tree)):
                 children.append(new_subgraph)
         return children
+
+    cdef relators_may_lift(self, CoveringSubgraph child, SimsTree tree):
+        """
+        Check that all relators either lift to a loop or run into a missing edge
+        at every vertex of a child subgraph.  Use the saved state of this
+        subgraph as a starting point for checking the child.
+        """
+    
+        cdef CyclicallyReducedWord w
+        cdef char l, index, vertex, start, save, length
+        cdef int n = 0, v, i = 0, j, rank=child.rank, max_degree=child.max_degree
+        for w in tree.relators:
+            length = w.length
+            for v in range(child.degree):
+                # Check whether relator n lifts to vertex v + 1.
+                j = n*max_degree + v
+                index = self.lift_indices[j]
+                if index >= length:
+                    # We already know the relator lifts to this vertex.
+                    continue
+                start = self.lift_vertices[j]
+                if start == 0:
+                    # The state is uninitialized.
+                    start = v + 1
+                vertex = start
+                for i in range(index, length):
+                    l = w.buffer[w.start + i]
+                    save = vertex
+                    if l > 0:
+                        vertex = child.outgoing[rank*(vertex - 1) + l - 1]
+                    else:
+                        vertex = child.incoming[rank*(vertex - 1) - l - 1]
+                    if vertex == 0:
+                        break
+                if vertex == 0:
+                    # We hit a missing edge - save the state and go on.
+                    child.lift_vertices[j] = save
+                    child.lift_indices[j] = i
+                    break 
+                if i == length - 1:
+                    # The entire relator lifted.  Is it a loop?
+                    if vertex == v + 1:
+                        # Yes.  Record that it lifts to a loop.
+                        child.lift_vertices[j] = vertex
+                        child.lift_indices[j] = length
+                    else:
+                        # No.  Discard this child.
+                        return False
+            n += 1
+        return True
 
     cdef keep(self, SimsTree tree):
         """
@@ -263,8 +334,8 @@ cdef class CoveringSubgraph:
         cdef int basepoint, next_basepoint, old_index, new_index, next_index
         cdef int degree = self.degree, rank = self.rank
         cdef int a, b, c
-        cdef unsigned char *outies = self.outies
-        cdef unsigned char *innies = self.innies
+        cdef unsigned char *outgoing = self.outgoing
+        cdef unsigned char *incoming = self.incoming
         for basepoint in range(2, degree + 1):
             memset(old_to_new, 0, degree + 1)
             # It is not necessary to clear new_to_old
@@ -281,11 +352,11 @@ cdef class CoveringSubgraph:
                     l = n >> 1
                     # Try to find an incident edge with label l + 1 or -(l + 1).
                     if sign == 0: # positive label
-                        a = outies[(new_index - 1)*rank + l] # outgoing to old a
-                        b = outies[(old_index - 1)*rank + l] # outgoing to old b
+                        a = outgoing[(new_index - 1)*rank + l] # to old a
+                        b = outgoing[(old_index - 1)*rank + l] # to old b
                     else: # negative label
-                        a = innies[(new_index - 1)*rank + l] # incoming from old a
-                        b = innies[(old_index - 1)*rank + l] # incoming from old b
+                        a = incoming[(new_index - 1)*rank + l] # from old a
+                        b = incoming[(old_index - 1)*rank + l] # from old b
                     if a == 0 or b == 0:
                         # Not enough edges to decide.
                         next_basepoint = True
@@ -372,8 +443,9 @@ cdef class SimsTree:
     def __init__(self, int rank=1, int max_degree=1, relators=[]):
         self.rank = rank
         self.max_degree = max_degree
-        self.relators = relators
-        self.root = CoveringSubgraph(rank=rank, max_degree=max_degree)
+        self.relators = [CyclicallyReducedWord(r, self.rank) for r in relators]
+        self.root = CoveringSubgraph(rank=rank, max_degree=max_degree,
+                                         num_relators=len(relators))
         self.nodes = [self.root]
         self.bloom()
 
