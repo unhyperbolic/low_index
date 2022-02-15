@@ -52,8 +52,10 @@ cdef class CoveringSubgraph:
     cdef unsigned char* outgoing
     cdef unsigned char* incoming
     cdef unsigned char* state_info
-    cdef unsigned char* lift_indices
-    cdef unsigned char* lift_vertices
+    cdef unsigned char* fwd_lift_indices
+    cdef unsigned char* fwd_lift_vertices
+    cdef unsigned char* bwd_lift_indices
+    cdef unsigned char* bwd_lift_vertices
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0):
         self.degree = 1
@@ -69,10 +71,12 @@ cdef class CoveringSubgraph:
         if num_relators > 0:
             # Maintain per-vertex state for each relator and its inverse.
             size = num_relators*max_degree
-            self.state_info = <unsigned char *>PyMem_Malloc(size << 2)
-            memset(self.state_info, 0, size << 2)
-            self.lift_indices = self.state_info
-            self.lift_vertices = &self.state_info[size]
+            self.state_info = <unsigned char *>PyMem_Malloc(4*size)
+            memset(self.state_info, 0, 4*size)
+            self.fwd_lift_indices = self.state_info
+            self.fwd_lift_vertices = &self.state_info[size]
+            self.bwd_lift_indices = &self.state_info[2*size]
+            self.bwd_lift_vertices = &self.state_info[3*size]
 
     def __dealloc__(self):
         PyMem_Free(self.outgoing)
@@ -129,7 +133,7 @@ cdef class CoveringSubgraph:
         memcpy(result.outgoing, self.outgoing, size)
         memcpy(result.incoming, self.incoming, size)
         if self.num_relators > 0:
-            size = self.num_relators*self.max_degree
+            size = 4*self.num_relators*self.max_degree
             memcpy(result.state_info, self.state_info, size)
         return result
 
@@ -230,8 +234,8 @@ cdef class CoveringSubgraph:
         for l, v, n in targets:
             new_subgraph = self.clone()
             new_subgraph.add_edge(l, v, n)
-            if (self.relators_may_lift(new_subgraph, tree) and
-                new_subgraph.may_be_minimal(tree)):
+            if (self.relators_may_lift(new_subgraph, tree)
+                and new_subgraph.may_be_minimal(tree)):
                 children.append(new_subgraph)
         return children
 
@@ -241,7 +245,6 @@ cdef class CoveringSubgraph:
         either lifts to a loop or runs into a missing edge. This subgraph uses
         its saved state as the starting point for checking the child.
         """
-    
         cdef CyclicallyReducedWord w
         cdef char l, index, vertex, start, save, length
         cdef int n = 0, v, i = 0, j
@@ -251,11 +254,11 @@ cdef class CoveringSubgraph:
             for v in range(child.degree):
                 # Check whether relator n lifts to a loop at vertex v + 1.
                 j = n*max_degree + v
-                index = self.lift_indices[j]
+                index = self.fwd_lift_indices[j]
                 if index >= length:
-                    # We already know that the relator lifts to a loop.
+                    # We already checked that the relator lifts to a loop.
                     continue
-                start = self.lift_vertices[j]
+                start = self.fwd_lift_vertices[j]
                 if start == 0:
                     # The state is uninitialized.
                     start = v + 1
@@ -271,20 +274,18 @@ cdef class CoveringSubgraph:
                         break
                 if vertex == 0:
                     # We hit a missing edge - save the state and go on.
-                    child.lift_vertices[j] = save
-                    child.lift_indices[j] = i
-                    break 
-                if i == length - 1:
+                    child.fwd_lift_vertices[j] = save
+                    child.fwd_lift_indices[j] = i
+                    #break
+                elif i == length - 1:
                     # The entire relator lifted.  Is it a loop?
                     if vertex == v + 1:
                         # Yes.  Record that it lifts to a loop.
-                        child.lift_vertices[j] = vertex
-                        child.lift_indices[j] = length
-                        break
+                        child.fwd_lift_vertices[j] = vertex
+                        child.fwd_lift_indices[j] = length
                     else:
                         # No.  Discard this child.
                         return False
-                # Try lifting the inverse of the relation and deducing.
             n += 1
         return True
 
@@ -354,11 +355,11 @@ cdef class CoveringSubgraph:
                     l = n >> 1
                     # Try to find an incident edge with label l + 1 or -(l + 1).
                     if sign == 0: # positive label
-                        a = outgoing[(new_index - 1)*rank + l] # to old a
-                        b = outgoing[(old_index - 1)*rank + l] # to old b
+                        a = outgoing[(new_index - 1)*rank + l]
+                        b = outgoing[(old_index - 1)*rank + l]
                     else: # negative label
-                        a = incoming[(new_index - 1)*rank + l] # from old a
-                        b = incoming[(old_index - 1)*rank + l] # from old b
+                        a = incoming[(new_index - 1)*rank + l]
+                        b = incoming[(old_index - 1)*rank + l]
                     if a == 0 or b == 0:
                         # Not enough edges to decide.
                         next_basepoint = True
