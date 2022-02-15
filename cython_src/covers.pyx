@@ -258,11 +258,10 @@ cdef class CoveringSubgraph:
                 if index >= length:
                     # We already checked that the relator lifts to a loop.
                     continue
-                start = self.fwd_lift_vertices[j]
-                if start == 0:
+                vertex = self.fwd_lift_vertices[j]
+                if vertex == 0:
                     # The state is uninitialized.
-                    start = v + 1
-                vertex = start
+                    vertex = v + 1
                 for i in range(index, length):
                     l = w.buffer[w.start + i]
                     save = vertex
