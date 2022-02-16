@@ -246,9 +246,10 @@ cdef class CoveringSubgraph:
         its saved state as the starting point for checking the child.
         """
         cdef CyclicallyReducedWord w
-        cdef char l, index, vertex, start, save, length
+        cdef char l, index, vertex, save, fwd_save, bwd_start, length
         cdef int n = 0, v, i = 0, j
         cdef int rank=child.rank, max_degree=child.max_degree
+        cdef list deductions = []
         for w in tree.relators:
             length = w.length
             for v in range(child.degree):
@@ -275,7 +276,31 @@ cdef class CoveringSubgraph:
                     # We hit a missing edge - save the state and go on.
                     child.fwd_lift_vertices[j] = save
                     child.fwd_lift_indices[j] = i
-                    #break
+                    # Try lifting the inverse of the relation
+                    # fwd_save = save
+                    # vertex = child.bwd_lift_vertices[j]
+                    # if vertex == 0:
+                    #     vertex = v + 1
+                    # index = child.bwd_lift_indices[j]
+                    # if index == 0:
+                    #     index = length - 1
+                    # if index < i:
+                    #     return False
+                    # for k in range(index, i - 1, -1):
+                    #     l = -w.buffer[w.start + k]
+                    #     #print(k, l, vertex, ': ',  end='')
+                    #     save = vertex
+                    #     if l > 0:
+                    #         vertex = child.outgoing[rank*(vertex - 1) + l - 1]
+                    #     else:
+                    #         vertex = child.incoming[rank*(vertex - 1) - l - 1]
+                    #     if vertex == 0:
+                    #         break
+                    #print()
+                    #if k == i:
+                    #    deductions.append((l, save, fwd_save))
+                    # child.bwd_lift_vertices[j] = save
+                    # child.bwd_lift_indices[j] = k
                 elif i == length - 1:
                     # The entire relator lifted.  Is it a loop?
                     if vertex == v + 1:
@@ -286,6 +311,8 @@ cdef class CoveringSubgraph:
                         # No.  Discard this child.
                         return False
             n += 1
+#        for l, a, b in deductions:
+#            print(l, a, b)
         return True
 
     cdef may_be_minimal(self, SimsTree tree):
