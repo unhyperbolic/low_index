@@ -52,10 +52,8 @@ cdef class CoveringSubgraph:
     cdef unsigned char* outgoing
     cdef unsigned char* incoming
     cdef unsigned char* state_info
-    cdef unsigned char* fwd_lift_indices
-    cdef unsigned char* fwd_lift_vertices
-    cdef unsigned char* bwd_lift_indices
-    cdef unsigned char* bwd_lift_vertices
+    cdef unsigned char* lift_indices
+    cdef unsigned char* lift_vertices
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0):
         self.degree = 1
@@ -71,12 +69,10 @@ cdef class CoveringSubgraph:
         if num_relators > 0:
             # Maintain per-vertex state for each relator and its inverse.
             size = num_relators*max_degree
-            self.state_info = <unsigned char *>PyMem_Malloc(4*size)
-            memset(self.state_info, 0, 4*size)
-            self.fwd_lift_indices = self.state_info
-            self.fwd_lift_vertices = &self.state_info[size]
-            self.bwd_lift_indices = &self.state_info[2*size]
-            self.bwd_lift_vertices = &self.state_info[3*size]
+            self.state_info = <unsigned char *>PyMem_Malloc(2*size)
+            memset(self.state_info, 0, 2*size)
+            self.lift_indices = self.state_info
+            self.lift_vertices = &self.state_info[size]
 
     def __dealloc__(self):
         PyMem_Free(self.outgoing)
@@ -123,6 +119,9 @@ cdef class CoveringSubgraph:
     cpdef is_complete(self):
         return self.num_edges == self.rank*self.degree
 
+    cdef _is_complete(self):
+        return self.num_edges == self.rank*self.degree
+
     cdef clone(self):
         cdef int size = self.rank*self.max_degree
         result = CoveringSubgraph(self.rank, self.max_degree,
@@ -133,7 +132,7 @@ cdef class CoveringSubgraph:
         memcpy(result.outgoing, self.outgoing, size)
         memcpy(result.incoming, self.incoming, size)
         if self.num_relators > 0:
-            size = 4*self.num_relators*self.max_degree
+            size = 2*self.num_relators*self.max_degree
             memcpy(result.state_info, self.state_info, size)
         return result
 
@@ -246,7 +245,7 @@ cdef class CoveringSubgraph:
         its saved state as the starting point for checking the child.
         """
         cdef CyclicallyReducedWord w
-        cdef char l, index, vertex, save, fwd_save, bwd_start, length
+        cdef char l, index, vertex, save, length
         cdef int n = 0, v, i = 0, j
         cdef int rank=child.rank, max_degree=child.max_degree
         cdef list deductions = []
@@ -255,11 +254,11 @@ cdef class CoveringSubgraph:
             for v in range(child.degree):
                 # Check whether relator n lifts to a loop at vertex v + 1.
                 j = n*max_degree + v
-                index = self.fwd_lift_indices[j]
+                index = self.lift_indices[j]
                 if index >= length:
                     # We already checked that the relator lifts to a loop.
                     continue
-                vertex = self.fwd_lift_vertices[j]
+                vertex = self.lift_vertices[j]
                 if vertex == 0:
                     # The state is uninitialized.
                     vertex = v + 1
@@ -274,45 +273,18 @@ cdef class CoveringSubgraph:
                         break
                 if vertex == 0:
                     # We hit a missing edge - save the state and go on.
-                    child.fwd_lift_vertices[j] = save
-                    child.fwd_lift_indices[j] = i
-                    # Try lifting the inverse of the relation
-                    # fwd_save = save
-                    # vertex = child.bwd_lift_vertices[j]
-                    # if vertex == 0:
-                    #     vertex = v + 1
-                    # index = child.bwd_lift_indices[j]
-                    # if index == 0:
-                    #     index = length - 1
-                    # if index < i:
-                    #     return False
-                    # for k in range(index, i - 1, -1):
-                    #     l = -w.buffer[w.start + k]
-                    #     #print(k, l, vertex, ': ',  end='')
-                    #     save = vertex
-                    #     if l > 0:
-                    #         vertex = child.outgoing[rank*(vertex - 1) + l - 1]
-                    #     else:
-                    #         vertex = child.incoming[rank*(vertex - 1) - l - 1]
-                    #     if vertex == 0:
-                    #         break
-                    #print()
-                    #if k == i:
-                    #    deductions.append((l, save, fwd_save))
-                    # child.bwd_lift_vertices[j] = save
-                    # child.bwd_lift_indices[j] = k
+                    child.lift_vertices[j] = save
+                    child.lift_indices[j] = i
                 elif i == length - 1:
                     # The entire relator lifted.  Is it a loop?
                     if vertex == v + 1:
                         # Yes.  Record that it lifts to a loop.
-                        child.fwd_lift_vertices[j] = vertex
-                        child.fwd_lift_indices[j] = length
+                        child.lift_vertices[j] = vertex
+                        child.lift_indices[j] = length
                     else:
                         # No.  Discard this child.
                         return False
             n += 1
-#        for l, a, b in deductions:
-#            print(l, a, b)
         return True
 
     cdef may_be_minimal(self, SimsTree tree):
@@ -500,7 +472,7 @@ cdef class SimsTree:
                 count += len(sprouts)
                 if sprouts:
                     new_nodes += sprouts
-                elif tip.is_complete():
+                elif tip._is_complete():
                     new_nodes.append(tip)
             if count == 0:
                 break
