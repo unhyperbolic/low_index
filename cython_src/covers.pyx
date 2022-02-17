@@ -51,9 +51,6 @@ cdef class CoveringSubgraph:
     cdef int num_relators
     cdef unsigned char* outgoing
     cdef unsigned char* incoming
-    cdef unsigned char* state_info
-    cdef unsigned char* lift_indices
-    cdef unsigned char* lift_vertices
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0):
         self.degree = 1
@@ -66,19 +63,10 @@ cdef class CoveringSubgraph:
         memset(self.outgoing, 0, size)
         self.incoming = <unsigned char *>PyMem_Malloc(size)
         memset(self.incoming, 0, size)
-        if num_relators > 0:
-            # Maintain per-vertex state for each relator and its inverse.
-            size = num_relators*max_degree
-            self.state_info = <unsigned char *>PyMem_Malloc(2*size)
-            memset(self.state_info, 0, 2*size)
-            self.lift_indices = self.state_info
-            self.lift_vertices = &self.state_info[size]
 
     def __dealloc__(self):
         PyMem_Free(self.outgoing)
         PyMem_Free(self.incoming)
-        if self.num_relators:
-            PyMem_Free(self.state_info)
 
     def __str__(self):
         cdef int t
@@ -93,9 +81,6 @@ cdef class CoveringSubgraph:
     def _data(self):
         print('out:', [n for n in self.outgoing[:self.rank*self.degree]])
         print('in:', [n for n in self.incoming[:self.rank*self.degree]])
-
-    def __copy__(self):
-        return self.clone()
 
     def __key__(self):
         return self.outgoing[:self.rank*self.degree]
@@ -121,25 +106,6 @@ cdef class CoveringSubgraph:
 
     cdef _is_complete(self):
         return self.num_edges == self.rank*self.degree
-
-    cdef clone(self):
-        result = CoveringSubgraph(self.rank, self.max_degree,
-                                      self.num_relators)
-        self._copy_in_place(result)
-        return result
-
-    cdef _copy_in_place(CoveringSubgraph self, CoveringSubgraph other):
-        # These must have the same rank, max_degree, and num_relators
-        # We do not check!
-        cdef int size = self.rank*self.max_degree
-        other.degree = self.degree
-        other.num_edges = self.num_edges
-        other.num_relators = self.num_relators
-        memcpy(other.outgoing, self.outgoing, size)
-        memcpy(other.incoming, self.incoming, size)
-        if self.num_relators > 0:
-            size = 2*self.num_relators*self.max_degree
-            memcpy(other.state_info, self.state_info, size)
 
     cdef add_edge(self, int letter, int from_vertex, int to_vertex):
         """
@@ -203,6 +169,55 @@ cdef class CoveringSubgraph:
                 l = qr.rem
                 return v + 1, -(l + 1)
 
+cdef class SimsNode(CoveringSubgraph):
+    cdef unsigned char* state_info
+    cdef unsigned char* lift_indices
+    cdef unsigned char* lift_vertices
+
+    def __cinit__(self, int rank, int max_degree, int num_relators=0):
+        CoveringSubgraph.__cinit__(self, rank, max_degree, num_relators)
+        if num_relators > 0:
+            # Maintain per-vertex state for each relator and its inverse.
+            size = num_relators*max_degree
+            self.state_info = <unsigned char *>PyMem_Malloc(2*size)
+            memset(self.state_info, 0, 2*size)
+            self.lift_indices = self.state_info
+            self.lift_vertices = &self.state_info[size]
+
+    def __dealloc__(self):
+        CoveringSubgraph.__dealloc__(self)
+        if self.num_relators:
+            PyMem_Free(self.state_info)
+
+    def __str__(self):
+        cdef int t
+        result = 'Sims Node with edges:\n'
+        for f in range(self.degree):
+            for n in range(self.rank):
+                 t = self.outgoing[f*self.rank + n]
+                 if t:
+                     result += '%d--%d->%d\n'%(f + 1, n + 1, t)
+        return result[:-1]
+
+    cdef clone(self):
+        result = SimsNode(self.rank, self.max_degree,
+                                      self.num_relators)
+        self._copy_in_place(result)
+        return result
+
+    cdef _copy_in_place(SimsNode self, SimsNode other):
+        # These must have the same rank, max_degree, and num_relators
+        # We do not check!
+        cdef int size = self.rank*self.max_degree
+        other.degree = self.degree
+        other.num_edges = self.num_edges
+        other.num_relators = self.num_relators
+        memcpy(other.outgoing, self.outgoing, size)
+        memcpy(other.incoming, self.incoming, size)
+        if self.num_relators > 0:
+            size = 2*self.num_relators*self.max_degree
+            memcpy(other.state_info, self.state_info, size)
+
     cdef sprout(self, SimsTree tree):
         """
         Find the first empty edge slot in this based partial covering.  For each
@@ -210,7 +225,7 @@ cdef class CoveringSubgraph:
         the subgraph obtained by adding that edge.  Return the list of new nodes.
         """
         cdef int n, v, l, i, rank=self.rank
-        cdef CoveringSubgraph new_subgraph
+        cdef SimsNode new_subgraph
         cdef list children = []
         try:
             v, l = self.first_empty_slot()
@@ -244,7 +259,7 @@ cdef class CoveringSubgraph:
                 children.append(new_subgraph.clone())
         return children
 
-    cdef relators_may_lift(self, CoveringSubgraph child, SimsTree tree):
+    cdef relators_may_lift(self, SimsNode child, SimsTree tree):
         """
         Check that when any relator is lifted to a vertex of a child graph it
         either lifts to a loop or runs into a missing edge. This subgraph uses
@@ -253,8 +268,7 @@ cdef class CoveringSubgraph:
         cdef CyclicallyReducedWord w
         cdef char l, index, vertex, save, length
         cdef int n = 0, v, i = 0, j
-        cdef int rank=child.rank, max_degree=child.max_degree
-        cdef list deductions = []
+        cdef int rank = child.rank, max_degree = child.max_degree
         for w in tree.relators:
             length = w.length
             for v in range(child.degree):
@@ -292,6 +306,7 @@ cdef class CoveringSubgraph:
                         return False
             n += 1
         return True
+
     cdef may_be_minimal(self, SimsTree tree):
         """
         Return False if the subgraph can provably not be extended to a cover
@@ -387,8 +402,8 @@ cdef class CoveringSubgraph:
 
 cdef class SimsTree:
     """
-    A "tree" of CoveringSubgraphs constructed by Sims algorithm.  Each
-    CoveringSubgraph in the tree is constructed by adding edges to its parent in
+    A "tree" of SimsNodes constructed by Sims algorithm.  Each
+    SimsNode in the tree is constructed by adding edges to its parent in
     such a way that every relation that can be lifted lifts to a loop.  (It is
     allowed for a relation to fail to lift because an edge is missing from the
     subgraph.)
@@ -430,12 +445,12 @@ cdef class SimsTree:
     """
     cdef int rank
     cdef int max_degree
-    cdef CoveringSubgraph root
+    cdef SimsNode root
     cdef char done
     cdef public list nodes
     cdef public list relators
-    # Workspaces used by CoveringSubgraphs when checking minimality
-    cdef CoveringSubgraph model
+    # Workspaces used by SimsNodes when checking minimality
+    cdef SimsNode model
     cdef unsigned char *old_to_new
     cdef unsigned char *new_to_old
 
@@ -451,9 +466,9 @@ cdef class SimsTree:
         self.rank = rank
         self.max_degree = max_degree
         self.relators = [CyclicallyReducedWord(r, self.rank) for r in relators]
-        self.root = CoveringSubgraph(rank=rank, max_degree=max_degree,
+        self.root = SimsNode(rank=rank, max_degree=max_degree,
                                          num_relators=len(relators))
-        self.model = CoveringSubgraph(rank=rank, max_degree=max_degree,
+        self.model = SimsNode(rank=rank, max_degree=max_degree,
                                          num_relators=len(relators))
         self.nodes = [self.root]
         self.bloom()
@@ -468,7 +483,7 @@ cdef class SimsTree:
         return iter(self.nodes)
 
     cdef bloom(self):
-        cdef CoveringSubgraph tip
+        cdef SimsNode tip
         cdef int count = 0
         cdef list new_nodes
         cdef list sprouts
