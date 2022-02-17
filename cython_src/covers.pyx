@@ -123,18 +123,23 @@ cdef class CoveringSubgraph:
         return self.num_edges == self.rank*self.degree
 
     cdef clone(self):
-        cdef int size = self.rank*self.max_degree
         result = CoveringSubgraph(self.rank, self.max_degree,
                                       self.num_relators)
-        result.degree = self.degree
-        result.num_edges = self.num_edges
-        result.num_relators = self.num_relators
-        memcpy(result.outgoing, self.outgoing, size)
-        memcpy(result.incoming, self.incoming, size)
+        self._copy_in_place(result)
+        return result
+
+    cdef _copy_in_place(CoveringSubgraph self, CoveringSubgraph other):
+        # These must have the same rank, max_degree, and num_relators
+        # We do not check!
+        cdef int size = self.rank*self.max_degree
+        other.degree = self.degree
+        other.num_edges = self.num_edges
+        other.num_relators = self.num_relators
+        memcpy(other.outgoing, self.outgoing, size)
+        memcpy(other.incoming, self.incoming, size)
         if self.num_relators > 0:
             size = 2*self.num_relators*self.max_degree
-            memcpy(result.state_info, self.state_info, size)
-        return result
+            memcpy(other.state_info, self.state_info, size)
 
     cdef add_edge(self, int letter, int from_vertex, int to_vertex):
         """
@@ -231,11 +236,12 @@ cdef class CoveringSubgraph:
         if self.degree < self.max_degree:
             targets.append((l, v, self.degree + 1))
         for l, v, n in targets:
-            new_subgraph = self.clone()
+            new_subgraph = tree.model
+            self._copy_in_place(new_subgraph)
             new_subgraph.add_edge(l, v, n)
             if (self.relators_may_lift(new_subgraph, tree)
                 and new_subgraph.may_be_minimal(tree)):
-                children.append(new_subgraph)
+                children.append(new_subgraph.clone())
         return children
 
     cdef relators_may_lift(self, CoveringSubgraph child, SimsTree tree):
@@ -286,7 +292,6 @@ cdef class CoveringSubgraph:
                         return False
             n += 1
         return True
-
     cdef may_be_minimal(self, SimsTree tree):
         """
         Return False if the subgraph can provably not be extended to a cover
@@ -430,6 +435,7 @@ cdef class SimsTree:
     cdef public list nodes
     cdef public list relators
     # Workspaces used by CoveringSubgraphs when checking minimality
+    cdef CoveringSubgraph model
     cdef unsigned char *old_to_new
     cdef unsigned char *new_to_old
 
@@ -446,6 +452,8 @@ cdef class SimsTree:
         self.max_degree = max_degree
         self.relators = [CyclicallyReducedWord(r, self.rank) for r in relators]
         self.root = CoveringSubgraph(rank=rank, max_degree=max_degree,
+                                         num_relators=len(relators))
+        self.model = CoveringSubgraph(rank=rank, max_degree=max_degree,
                                          num_relators=len(relators))
         self.nodes = [self.root]
         self.bloom()
