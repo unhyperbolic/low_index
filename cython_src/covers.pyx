@@ -175,7 +175,6 @@ cdef class SimsNode(CoveringSubgraph):
     cdef unsigned char* lift_vertices
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0):
-        CoveringSubgraph.__cinit__(self, rank, max_degree, num_relators)
         if num_relators > 0:
             # Maintain per-vertex state for each relator and its inverse.
             size = num_relators*max_degree
@@ -185,7 +184,6 @@ cdef class SimsNode(CoveringSubgraph):
             self.lift_vertices = &self.state_info[size]
 
     def __dealloc__(self):
-        CoveringSubgraph.__dealloc__(self)
         if self.num_relators:
             PyMem_Free(self.state_info)
 
@@ -500,3 +498,7 @@ cdef class SimsTree:
             if count == 0:
                 break
             self.nodes = new_nodes
+
+
+
+
