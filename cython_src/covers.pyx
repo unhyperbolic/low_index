@@ -357,20 +357,20 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char *outgoing = self.outgoing
         cdef unsigned char *incoming = self.incoming
         for basepoint in range(2, degree + 1):
+            # init permutations
             memset(old_to_new, 0, degree + 1)
             # It is not necessary to clear new_to_old
             #memset(new_to_old, 0, degree + 1)
-            next_basepoint = False
-            next_index = 1
-            # init permutations
             old_to_new[basepoint] = 1
             new_to_old[1] = basepoint
+            next_basepoint = False
             # initial data
+            next_index = 1
             slot_vertex = 1
             slot_label = 0
+            # Iterate over all slots for this basepoint.
             while slot_vertex <= degree:
                 old_index = new_to_old[slot_vertex]
-                slot_label = 0
                 while True:
                     sign = slot_label & 0x1
                     l = slot_label >> 1
