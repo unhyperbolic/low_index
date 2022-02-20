@@ -350,7 +350,8 @@ cdef class SimsNode(CoveringSubgraph):
         """
         cdef unsigned char *old_to_new = tree.old_to_new
         cdef unsigned char *new_to_old = tree.new_to_old
-        cdef int basepoint, next_basepoint, old_index, new_index, next_index
+        cdef int basepoint, next_basepoint, old_index, next_index
+        cdef int slot_vertex, slot_label
         cdef int degree = self.degree, rank = self.rank
         cdef int a, b, c
         cdef unsigned char *outgoing = self.outgoing
@@ -359,22 +360,26 @@ cdef class SimsNode(CoveringSubgraph):
             memset(old_to_new, 0, degree + 1)
             # It is not necessary to clear new_to_old
             #memset(new_to_old, 0, degree + 1)
-            next_basepoint = 0
-            # Attempt to find the indexing determined by this basepoint.
+            next_basepoint = False
             next_index = 1
+            # init permutations
             old_to_new[basepoint] = 1
             new_to_old[1] = basepoint
-            for new_index in range(1, degree + 1):
-                old_index = new_to_old[new_index]
-                for n in range(2*rank):
-                    sign = n & 0x1
-                    l = n >> 1
+            # initial data
+            slot_vertex = 1
+            slot_label = 0
+            while slot_vertex <= degree:
+                old_index = new_to_old[slot_vertex]
+                slot_label = 0
+                while True:
+                    sign = slot_label & 0x1
+                    l = slot_label >> 1
                     # Try to find an incident edge with label l + 1 or -(l + 1).
                     if sign == 0: # positive label
-                        a = outgoing[(new_index - 1)*rank + l]
+                        a = outgoing[(slot_vertex - 1)*rank + l]
                         b = outgoing[(old_index - 1)*rank + l]
                     else: # negative label
-                        a = incoming[(new_index - 1)*rank + l]
+                        a = incoming[(slot_vertex - 1)*rank + l]
                         b = incoming[(old_index - 1)*rank + l]
                     if a == 0 or b == 0:
                         # Not enough edges to decide.
@@ -393,6 +398,11 @@ cdef class SimsNode(CoveringSubgraph):
                     if c > a:
                         # The old basepoint is better - try the next one.
                         next_basepoint = True
+                        break
+                    slot_label += 1
+                    if slot_label == 2*rank:
+                        slot_label = 0
+                        slot_vertex += 1
                         break
                 if next_basepoint:
                     break
