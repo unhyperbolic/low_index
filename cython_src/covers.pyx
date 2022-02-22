@@ -408,6 +408,64 @@ cdef class SimsNode(CoveringSubgraph):
                     slot_vertex += 1
         return True
 
+cdef class SimsTreeIterator:
+    cdef SimsTree tree
+    cdef list stack, cache
+    cdef int rank, max_degree, num_relators
+    
+    def __init__(self, SimsTree tree):
+        self.tree = tree
+        self.rank = tree.rank
+        self.max_degree = tree.max_degree
+        self.num_relators = len(tree.relators)
+        self.stack = []
+        self.cache = []
+        for n in range(self.rank*self.max_degree + 1):
+            self.cache.append(
+                SimsNode(self.rank, self.max_degree, self.num_relators))
+        self.push(tree.root)
+
+    def __next__(self):
+        cdef list sprouts
+        cdef SimsNode top, node
+        while True:
+            if not self.stack:
+                raise StopIteration
+            top, sprouts = self.stack[-1]
+            if top.is_complete():
+                return self.pop()[0]
+            if sprouts:
+                # This gives the previous order
+                # self.push(sprouts.pop(0))
+                self.push(sprouts.pop())
+            else:
+                while True:
+                    if not self.stack:
+                        raise StopIteration
+                    top, sprouts = self.stack[-1]
+                    if not sprouts:
+                        self.pop()
+                    else:
+                        break
+
+    cdef push(SimsTreeIterator self, SimsNode node):
+        cdef list sprouts
+        cdef SimsNode cached
+        cached = self.cache.pop()
+        node._copy_in_place(cached)
+        sprouts = cached.sprout(self.tree)
+        self.stack.append((cached, sprouts))
+
+    cdef pop(SimsTreeIterator self):
+        cdef SimsNode top
+        cdef list sprouts
+        top, sprouts = self.stack.pop()
+        cdef SimsNode result = SimsNode(self.rank, self.max_degree,
+            self.num_relators)
+        top._copy_in_place(result)
+        self.cache.append(top)
+        return (result, sprouts)
+
 cdef class SimsTree:
     """
     A "tree" of SimsNodes constructed by Sims algorithm.  Each
@@ -417,39 +475,44 @@ cdef class SimsTree:
     subgraph.)
 
     Implementation note: The collection of all graphs produced by Sims algorithm
-    can be viewed as a tree, where the children of each node are each obtained
-    by adding edges to the node.  However, only the tips of the tree are of
-    interest.  So we actually implement the "tree" as a python list.  Each
-    pass through the loop in the bloom method generates a new list by replacing
-    each subgraph by a list of subgraphs obtained by adding edges.
+    can be viewed as a tree, where the children of a node are obtained by adding
+    one edge at the first empty slot.  However, only the tips of the tree are of
+    interest.  So we can implement the "tree" as a python list.  Each pass
+    through the loop in the bloom method generates a new list by replacing each
+    subgraph by a list of subgraphs obtained by adding edges.  This turns out to
+    be very memory intensive, since these lists grow very large before finally
+    collapsing at the end of the computation.  We also provide an iterator which
+    iterates through the tips of the tree while using a constant amount of
+    memory.  The depth of the tree is bounded by the number of edges in a cover
+    of the maximal allowed degree.  Traversal of the tree in depth-first order
+    only requires a stack of size equal to the maximum depth.
 
     >>> from fpgroups import *
-    >>> t = SimsTree(rank=1, max_degree=3)
+    >>> t = SimsTree(rank=1, max_degree=3).list()
     >>> len(t)
     3
     >>> for g in t: print(g)
     ...
-    Covering graph with edges:
-    1--1->1
-    Covering graph with edges:
-    1--1->2
-    2--1->1
-    Covering graph with edges:
+    Sims Node with edges:
     1--1->2
     2--1->3
     3--1->1
-    >>> t = SimsTree(rank=2, max_degree=3)
+    Sims Node with edges:
+    1--1->2
+    2--1->1
+    Sims Node with edges:
+    1--1->1
+    >>> t = SimsTree(rank=2, max_degree=3).list()
     >>> len(t)
     11
     >>> print(t[7])
-    Covering graph with edges:
-    1--1->2
-    1--2->1
-    2--1->3
-    2--2->2
-    3--1->1
-    3--2->3
-
+    Sims Node with edges:
+    1--1->1
+    1--2->2
+    2--1->2
+    2--2->3
+    3--1->3
+    3--2->1
     """
     cdef int rank
     cdef int max_degree
@@ -479,18 +542,32 @@ cdef class SimsTree:
         self.model = SimsNode(rank=rank, max_degree=max_degree,
                                          num_relators=len(relators))
         self.nodes = [self.root]
-        self.bloom()
 
-    def __len__(self):
-        return len(self.nodes)
+    # def __len__(self):
+    #     return len(self.nodes)
 
-    def __getitem__(self, index):
-        return self.nodes[index]
+    # def __getitem__(self, index):
+    #     return self.nodes[index]
 
     def __iter__(self):
-        return iter(self.nodes)
+        return SimsTreeIterator(self)
 
-    cdef bloom(self):
+    def list(self):
+        """
+        Return a list created from this tree's iterator.
+        """
+        return list(self)
+
+    # This method uses lots of memory but is currently somewhat faster
+    # that the list method.  I am leaving it in place for comparison
+    # purposes, and because it might be useful if we decide to
+    # parallelize the computation.  Starting from a list containing
+    # only the root of the tree it iteratively replaces each node in
+    # the list with a sublist consisting of the children of the node.
+    # This list can grow to be very large, before collapsing as the
+    # nodes become complete.
+
+    cpdef bloom(self):
         cdef SimsNode tip
         cdef int count = 0
         cdef list new_nodes
@@ -498,7 +575,7 @@ cdef class SimsTree:
         while True:
             count = 0
             new_nodes = []
-            for tip in self:
+            for tip in self.nodes:
                 sprouts = tip.sprout(self)
                 count += len(sprouts)
                 if sprouts:
@@ -508,6 +585,8 @@ cdef class SimsTree:
             if count == 0:
                 break
             self.nodes = new_nodes
+        return self.nodes
+
 
 
 
