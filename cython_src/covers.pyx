@@ -348,9 +348,9 @@ cdef class SimsNode(CoveringSubgraph):
         edge which would result in a higher complexity. If no such edge is found
         for any choice of basepoint it returns True.
         """
-        cdef unsigned char *old_to_new = tree.old_to_new
-        cdef unsigned char *new_to_old = tree.new_to_old
-        cdef int basepoint, next_basepoint, old_index, next_index
+        cdef unsigned char *std_to_alt = tree.std_to_alt
+        cdef unsigned char *alt_to_std = tree.alt_to_std
+        cdef int basepoint, std_index, next_index
         cdef int slot_vertex, slot_label
         cdef int degree = self.degree, rank = self.rank
         cdef int a, b, c
@@ -358,54 +358,47 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char *incoming = self.incoming
         for basepoint in range(2, degree + 1):
             # init permutations
-            memset(old_to_new, 0, degree + 1)
-            # It is not necessary to clear new_to_old
-            #memset(new_to_old, 0, degree + 1)
-            old_to_new[basepoint] = 1
-            new_to_old[1] = basepoint
-            next_basepoint = False
+            memset(std_to_alt, 0, degree + 1)
+            # It is not necessary to clear alt_to_std
+            #memset(alt_to_std, 0, degree + 1)
+            std_to_alt[basepoint] = 1
+            alt_to_std[1] = basepoint
             # initial data
             next_index = 1
             slot_vertex = 1
             slot_label = 0
-            # Iterate over all slots for this basepoint.
-            while slot_vertex <= degree:
-                old_index = new_to_old[slot_vertex]
-                while True:
-                    sign = slot_label & 0x1
-                    l = slot_label >> 1
-                    # Try to find an incident edge with label l + 1 or -(l + 1).
-                    if sign == 0: # positive label
-                        a = outgoing[(slot_vertex - 1)*rank + l]
-                        b = outgoing[(old_index - 1)*rank + l]
-                    else: # negative label
-                        a = incoming[(slot_vertex - 1)*rank + l]
-                        b = incoming[(old_index - 1)*rank + l]
-                    if a == 0 or b == 0:
-                        # Not enough edges to decide.
-                        next_basepoint = True
-                        break
-                    # Update the mappings between the old and new indices.
-                    if old_to_new[b] == 0:
-                        next_index += 1
-                        old_to_new[b] = next_index
-                        new_to_old[next_index] = b
-                    #Compare the old and new indices of the other end of the edge
-                    c = old_to_new[b]
-                    if c < a:
-                        # The new basepoint is better - discard this graph.
-                        return False
-                    if c > a:
-                        # The old basepoint is better - try the next one.
-                        next_basepoint = True
-                        break
-                    slot_label += 1
-                    if slot_label == 2*rank:
-                        slot_label = 0
-                        slot_vertex += 1
-                        break
-                if next_basepoint:
+            # Iterate over all possible slots.
+            while slot_vertex <= degree and slot_label < 2*self.rank:
+                std_index = alt_to_std[slot_vertex]
+                # Check that this slot is filled with repect to both indexings.
+                sign = slot_label & 0x1
+                l = slot_label >> 1
+                if sign == 0: # positive label
+                    a = outgoing[(slot_vertex - 1)*rank + l]
+                    b = outgoing[(std_index - 1)*rank + l]
+                else: # negative label
+                    a = incoming[(slot_vertex - 1)*rank + l]
+                    b = incoming[(std_index - 1)*rank + l]
+                if a == 0 or b == 0:
+                    # The slot was empty in one indexing, so we cannot decide.
                     break
+                # Update the mappings between the old and new indices.
+                if std_to_alt[b] == 0:
+                    next_index += 1
+                    std_to_alt[b] = next_index
+                    alt_to_std[next_index] = b
+                #Compare the old and new indices of the other end of the edge
+                c = std_to_alt[b]
+                if c < a:
+                    # The new basepoint is better - discard this graph.
+                    return False
+                if c > a:
+                    # The old basepoint is better - try the next one.
+                    break
+                slot_label += 1
+                if slot_label == 2*rank:
+                    slot_label = 0
+                    slot_vertex += 1
         return True
 
 cdef class SimsTree:
@@ -459,16 +452,16 @@ cdef class SimsTree:
     cdef public list relators
     # Workspaces used by SimsNodes when checking minimality
     cdef SimsNode model
-    cdef unsigned char *old_to_new
-    cdef unsigned char *new_to_old
+    cdef unsigned char *std_to_alt
+    cdef unsigned char *alt_to_std
 
     def __cinit__(self,  int rank=1, int max_degree=1, relators=[]):
-        self.old_to_new = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
-        self.new_to_old = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
+        self.std_to_alt = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
+        self.alt_to_std = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
 
     def __dealloc__(self):
-        PyMem_Free(self.old_to_new)
-        PyMem_Free(self.new_to_old)
+        PyMem_Free(self.std_to_alt)
+        PyMem_Free(self.alt_to_std)
 
     def __init__(self, int rank=1, int max_degree=1, relators=[]):
         self.rank = rank
