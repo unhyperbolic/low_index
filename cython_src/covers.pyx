@@ -350,43 +350,49 @@ cdef class SimsNode(CoveringSubgraph):
         """
         cdef unsigned char *std_to_alt = tree.std_to_alt
         cdef unsigned char *alt_to_std = tree.alt_to_std
-        cdef int basepoint, std_index, next_index
+        cdef int basepoint, max_index
         cdef int slot_vertex, slot_label
         cdef int degree = self.degree, rank = self.rank
         cdef int a, b, c
         cdef unsigned char *outgoing = self.outgoing
         cdef unsigned char *incoming = self.incoming
         for basepoint in range(2, degree + 1):
-            # init permutations
+            # We are working with the standard indexing (determined by basepoint
+            # 1) and an alternate indexing determined by another basepoint.  We
+            # construct mappings between the two indexings and store them in the
+            # arrays std_to_alt and alt_to_std. (Ignore the 0 entry due to
+            # 1-based indexing).
             memset(std_to_alt, 0, degree + 1)
             # It is not necessary to clear alt_to_std
             #memset(alt_to_std, 0, degree + 1)
+            # Initial state.
             std_to_alt[basepoint] = 1
             alt_to_std[1] = basepoint
-            # initial data
-            next_index = 1
+            max_index = 1
             slot_vertex = 1
             slot_label = 0
             # Iterate over all possible slots.
             while slot_vertex <= degree and slot_label < 2*self.rank:
-                std_index = alt_to_std[slot_vertex]
-                # Check that this slot is filled with repect to both indexings.
+                # Check that the slot is filled with repect to both indexings.
                 sign = slot_label & 0x1
                 l = slot_label >> 1
                 if sign == 0: # positive label
                     a = outgoing[(slot_vertex - 1)*rank + l]
-                    b = outgoing[(std_index - 1)*rank + l]
+                    b = outgoing[(alt_to_std[slot_vertex] - 1)*rank + l]
                 else: # negative label
                     a = incoming[(slot_vertex - 1)*rank + l]
-                    b = incoming[(std_index - 1)*rank + l]
+                    b = incoming[(alt_to_std[slot_vertex] - 1)*rank + l]
                 if a == 0 or b == 0:
                     # The slot was empty in one indexing, so we cannot decide.
                     break
-                # Update the mappings between the old and new indices.
+                # Update the mappings.
                 if std_to_alt[b] == 0:
-                    next_index += 1
-                    std_to_alt[b] = next_index
-                    alt_to_std[next_index] = b
+                    # This edge is the first with respect to the alternate indexing
+                    # that is incident to the vertex with standard index b.  We now
+                    # know its alternate index.
+                    max_index += 1
+                    std_to_alt[b] = max_index
+                    alt_to_std[max_index] = b
                 #Compare the old and new indices of the other end of the edge
                 c = std_to_alt[b]
                 if c < a:
@@ -395,6 +401,7 @@ cdef class SimsNode(CoveringSubgraph):
                 if c > a:
                     # The old basepoint is better - try the next one.
                     break
+                # Increment the slot.
                 slot_label += 1
                 if slot_label == 2*rank:
                     slot_label = 0
