@@ -171,7 +171,7 @@ cdef class CoveringSubgraph:
                 return (v + 1, -(l + 1))
         return (0,0)
 
-    cdef int int_first_empty_slot(self):
+    cdef int _first_empty_slot(self):
         cdef int v, l
         cdef div_t qr
         cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
@@ -246,14 +246,11 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
         cdef SimsNode new_subgraph
         cdef list children = []
-        v, l = self.first_empty_slot()
-        if v == 0:
+        slot = self._first_empty_slot()
+        if slot == 0:
             return children
-#        slot = self.int_first_empty_slot()
-#        if slot == 0:
-#            return children
-#        v = slot & 0xff
-#        l = slot >> 8
+        v = slot & 0xff
+        l = slot >> 8
         # Add edges with from this slot to all possible target slots.
         targets = []
         if l > 0:
@@ -437,7 +434,7 @@ cdef class SimsTreeIterator:
     cdef SimsTree tree
     cdef list stack, cache
     cdef int rank, max_degree, num_relators
-    
+
     def __init__(self, SimsTree tree):
         self.tree = tree
         self.rank = tree.rank
@@ -625,8 +622,3 @@ cdef class SimsTree:
                 break
             self.nodes = new_nodes
         return self.nodes
-
-
-
-
-
