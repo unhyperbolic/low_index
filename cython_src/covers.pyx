@@ -154,20 +154,39 @@ cdef class CoveringSubgraph:
             length += 1
         return saved, length
 
-    cdef first_empty_slot(self, int basepoint=1):
+    cdef first_empty_slot(self):
         cdef int v, l
         cdef div_t qr
+        cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
         for n in range(self.rank*self.degree):
-            if self.outgoing[n] == 0:
+            if outgoing[n] == 0:
                 qr = div(n, self.rank)
                 v = qr.quot
                 l = qr.rem
-                return v + 1, l + 1
-            if self.incoming[n] == 0:
+                return (v + 1, l + 1)
+            if incoming[n] == 0:
                 qr = div(n, self.rank)
                 v = qr.quot
                 l = qr.rem
-                return v + 1, -(l + 1)
+                return (v + 1, -(l + 1))
+        return (0,0)
+
+    cdef int int_first_empty_slot(self):
+        cdef int v, l
+        cdef div_t qr
+        cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
+        for n in range(self.rank*self.degree):
+            if outgoing[n] == 0:
+                qr = div(n, self.rank)
+                v = qr.quot
+                l = qr.rem
+                return ((l + 1) << 8) | (v + 1)
+            if incoming[n] == 0:
+                qr = div(n, self.rank)
+                v = qr.quot
+                l = qr.rem
+                return (-(l + 1) << 8) | (v + 1)
+        return 0
 
 cdef class SimsNode(CoveringSubgraph):
     cdef unsigned char* state_info
@@ -198,8 +217,8 @@ cdef class SimsNode(CoveringSubgraph):
         return result[:-1]
 
     cdef clone(self):
-        result = SimsNode(self.rank, self.max_degree,
-                                      self.num_relators)
+        cdef result = SimsNode(self.rank, self.max_degree,
+                                   self.num_relators)
         self._copy_in_place(result)
         return result
 
@@ -222,32 +241,38 @@ cdef class SimsNode(CoveringSubgraph):
         possible way to add an edge in that slot, create a new node containing
         the subgraph obtained by adding that edge.  Return the list of new nodes.
         """
-        cdef int n, v, l, i, rank=self.rank
+        cdef int n, v, l, i, slot
+        cdef int rank=self.rank, degree = self.degree, max_degree = self.max_degree
+        cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
         cdef SimsNode new_subgraph
         cdef list children = []
-        try:
-            v, l = self.first_empty_slot()
-        except TypeError:
-            return []
+        v, l = self.first_empty_slot()
+        if v == 0:
+            return children
+#        slot = self.int_first_empty_slot()
+#        if slot == 0:
+#            return children
+#        v = slot & 0xff
+#        l = slot >> 8
         # Add edges with from this slot to all possible target slots.
         targets = []
         if l > 0:
             i = 0
-            for n in range(self.degree):
-                t = self.incoming[i + l - 1]
+            for n in range(degree):
+                t = incoming[i + l - 1]
                 i += rank
                 if t == 0:
                     targets.append((l, v, n+1))
         else:
             i = 0
-            for n in range(self.degree):
-                t = self.outgoing[i - l - 1]
+            for n in range(degree):
+                t = outgoing[i - l - 1]
                 i += rank
                 if t == 0:
                     targets.append((l, v, n+1))
         # Also add an edge to a new vertex if allowed.
-        if self.degree < self.max_degree:
-            targets.append((l, v, self.degree + 1))
+        if degree < max_degree:
+            targets.append((l, v, degree + 1))
         for l, v, n in targets:
             new_subgraph = tree.model
             self._copy_in_place(new_subgraph)
@@ -438,7 +463,7 @@ cdef class SimsTreeIterator:
             if not self.stack:
                 return None
             top, sprouts = self.stack[-1]
-            if top.is_complete():
+            if top._is_complete():
                 return self.pop()[0]
             if sprouts:
                 # This gives the previous order
