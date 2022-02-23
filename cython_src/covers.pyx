@@ -426,11 +426,17 @@ cdef class SimsTreeIterator:
         self.push(tree.root)
 
     def __next__(self):
+        node = self._next()
+        if node is None:
+            raise StopIteration
+        return node
+
+    cdef _next(self):
         cdef list sprouts
         cdef SimsNode top, node
         while True:
             if not self.stack:
-                raise StopIteration
+                return None
             top, sprouts = self.stack[-1]
             if top.is_complete():
                 return self.pop()[0]
@@ -441,7 +447,7 @@ cdef class SimsTreeIterator:
             else:
                 while True:
                     if not self.stack:
-                        raise StopIteration
+                        return None
                     top, sprouts = self.stack[-1]
                     if not sprouts:
                         self.pop()
@@ -552,11 +558,19 @@ cdef class SimsTree:
     def __iter__(self):
         return SimsTreeIterator(self)
 
-    def list(self):
+    cpdef list(self):
         """
         Return a list created from this tree's iterator.
         """
-        return list(self)
+        cdef list result = []
+        cdef SimsTreeIterator iterator = SimsTreeIterator(self)
+        cdef SimsNode node
+        while True:
+            node = iterator._next()
+            if node is None:
+                break
+            result.append(node)
+        return result
 
     # This method uses lots of memory but is currently somewhat faster
     # that the list method.  I am leaving it in place for comparison
