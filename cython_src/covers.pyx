@@ -553,7 +553,8 @@ cdef class SimsTree:
     cdef unsigned char *std_to_alt
     cdef unsigned char *alt_to_std
 
-    def __cinit__(self,  int rank=1, int max_degree=1, relators=[]):
+    def __cinit__(self,  int rank=1, int max_degree=1, relators=[],
+                      strategy=None):
         self.std_to_alt = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
         self.alt_to_std = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
 
@@ -561,24 +562,35 @@ cdef class SimsTree:
         PyMem_Free(self.std_to_alt)
         PyMem_Free(self.alt_to_std)
 
-    def __init__(self, int rank=1, int max_degree=1, relators=[]):
+    def __init__(self, int rank=1, int max_degree=1, relators=[],
+                     strategy=None):
         self.rank = rank
         self.max_degree = max_degree
+        if strategy == 'spin_short':
+            relators = self.spin_short_relators(relators)
         self.relators = [CyclicallyReducedWord(r, self.rank) for r in relators]
         self.root = SimsNode(rank=rank, max_degree=max_degree,
-                                         num_relators=len(relators))
+                                         num_relators=len(self.relators))
         self.model = SimsNode(rank=rank, max_degree=max_degree,
-                                         num_relators=len(relators))
+                                         num_relators=len(self.relators))
         self.nodes = [self.root]
-
-    # def __len__(self):
-    #     return len(self.nodes)
-
-    # def __getitem__(self, index):
-    #     return self.nodes[index]
 
     def __iter__(self):
         return SimsTreeIterator(self)
+
+    cdef spin(self, str word):
+        return [word[k:] + word[:k] for k in range(len(word))]
+
+    def spin_short_relators(self, relators):
+        result = []
+        if relators:
+            avg = sum(len(r) for r in relators) / len(relators)
+            for r in relators:
+                if len(r) <= avg:
+                    result += self.spin(r)
+                else:
+                    result.append(r)
+        return sorted(result, key=lambda x : len(x))
 
     cpdef list(self):
         """
