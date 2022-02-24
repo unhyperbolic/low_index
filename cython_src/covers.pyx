@@ -286,7 +286,8 @@ cdef class SimsNode(CoveringSubgraph):
         its saved state as the starting point for checking the child.
         """
         cdef CyclicallyReducedWord w
-        cdef char l, index, vertex, save, length
+        cdef char l
+        cdef unsigned char index, vertex, save, length
         cdef int n = 0, v, i = 0, j
         cdef int rank = child.rank, max_degree = child.max_degree
         for w in tree.relators:
