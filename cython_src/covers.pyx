@@ -279,26 +279,18 @@ cdef class SimsNode(CoveringSubgraph):
                 children.append(new_subgraph.clone())
         return children
 
-    cdef relators_may_lift(self, SimsNode child, SimsTree tree):
-        """
-        Check that when any relator is lifted to a vertex of a child graph it
-        either lifts to a loop or runs into a missing edge. This subgraph uses
-        its saved state as the starting point for checking the child.
-        """
-        cdef CyclicallyReducedWord w
+    cdef int check_lifts(self, int start, int relator_index,
+                             CyclicallyReducedWord w, SimsNode child):
         cdef char l
         cdef unsigned char index, vertex, save, length
-        cdef int n = 0, v, i = 0, j
-        cdef int rank = child.rank, max_degree = child.max_degree
-        for w in tree.relators:
-            length = w.length
-            for v in range(child.degree):
-                # Check whether relator n lifts to a loop at vertex v + 1.
-                j = n*max_degree + v
-                index = self.lift_indices[j]
-                if index >= length:
-                    # We already checked that the relator lifts to a loop.
-                    continue
+        cdef int rank = child.rank, max_degree = child.max_degree, degree=child.degree
+        cdef int v = start, i = 0, j, base = relator_index*max_degree
+        length = w.length
+        while True:
+            # Check whether the relator w lifts to a loop at vertex v + 1.
+            j = base + v
+            index = self.lift_indices[j]
+            if index < length:
                 vertex = self.lift_vertices[j]
                 if vertex == 0:
                     # The state is uninitialized.
@@ -325,7 +317,24 @@ cdef class SimsNode(CoveringSubgraph):
                     else:
                         # No.  Discard this child.
                         return False
-            n += 1
+            v += 1
+            if v == degree:
+                v = 0
+            if v == start:
+                break
+        return True
+
+    cdef relators_may_lift(SimsNode self, SimsNode child, SimsTree tree):
+        """
+        Check that when any relator is lifted to a vertex of a child graph it
+        either lifts to a loop or runs into a missing edge. This subgraph uses
+        its saved state as the starting point for checking the child.
+        """
+        cdef int relator_index = 0, start = self.degree >> 1 
+        for w in tree.relators:
+            if not self.check_lifts(start, relator_index, w, child):
+                return False
+            relator_index += 1
         return True
 
     cdef may_be_minimal(self, SimsTree tree):
