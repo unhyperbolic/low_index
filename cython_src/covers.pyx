@@ -192,8 +192,12 @@ cdef class SimsNode(CoveringSubgraph):
     cdef unsigned char* state_info
     cdef unsigned char* lift_indices
     cdef unsigned char* lift_vertices
+    cdef unsigned char saved_vertex
+    cdef unsigned char saved_relator_index
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0):
+        self.saved_vertex = 0
+        self.saved_relator_index = 0
         if num_relators > 0:
             # Maintain per-vertex state for each relator and its inverse.
             size = num_relators*max_degree
@@ -270,6 +274,8 @@ cdef class SimsNode(CoveringSubgraph):
         # Also add an edge to a new vertex if allowed.
         if degree < max_degree:
             targets.append((l, v, degree + 1))
+        self.saved_vertex = 0
+        self.saved_relator_index = 0
         for l, v, n in targets:
             new_subgraph = tree.model
             self._copy_in_place(new_subgraph)
@@ -316,13 +322,13 @@ cdef class SimsNode(CoveringSubgraph):
                         child.lift_indices[j] = length
                     else:
                         # No.  Discard this child.
-                        return False
+                        return v + 1
             v += 1
             if v == degree:
                 v = 0
             if v == start:
                 break
-        return True
+        return 0
 
     cdef relators_may_lift(SimsNode self, SimsNode child, SimsTree tree):
         """
@@ -330,10 +336,22 @@ cdef class SimsNode(CoveringSubgraph):
         either lifts to a loop or runs into a missing edge. This subgraph uses
         its saved state as the starting point for checking the child.
         """
-        cdef int relator_index = 0, start = self.degree >> 1 
-        for w in tree.relators:
-            if not self.check_lifts(start, relator_index, w, child):
+        cdef int relator_index = 0, start = self.saved_vertex, vertex, skip = -1
+        cdef int saved_relator_index = self.saved_relator_index
+        if self.saved_vertex or self.saved_relator_index:
+            w = tree.relators[relator_index]
+            vertex = self.check_lifts(start, relator_index, w, child)
+            if vertex == 0:
+                skip = relator_index
+            else:
                 return False
+        for w in tree.relators:
+            if relator_index != skip:
+                vertex = self.check_lifts(start, relator_index, w, child)
+                if vertex:
+                    self.saved_vertex = vertex - 1
+                    self.saved_relator_index = relator_index
+                    return False
             relator_index += 1
         return True
 
