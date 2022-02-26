@@ -157,7 +157,8 @@ cdef class CoveringSubgraph:
     cdef first_empty_slot(self):
         cdef int v, l
         cdef div_t qr
-        cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
+        cdef unsigned char *incoming = self.incoming
+        cdef unsigned char *outgoing = self.outgoing
         for n in range(self.rank*self.degree):
             if outgoing[n] == 0:
                 qr = div(n, self.rank)
@@ -174,7 +175,8 @@ cdef class CoveringSubgraph:
     cdef int _first_empty_slot(self):
         cdef int v, l
         cdef div_t qr
-        cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
+        cdef unsigned char *incoming = self.incoming
+        cdef unsigned char *outgoing = self.outgoing
         for n in range(self.rank*self.degree):
             if outgoing[n] == 0:
                 qr = div(n, self.rank)
@@ -192,12 +194,8 @@ cdef class SimsNode(CoveringSubgraph):
     cdef unsigned char* state_info
     cdef unsigned char* lift_indices
     cdef unsigned char* lift_vertices
-    cdef unsigned char saved_vertex
-    cdef unsigned char saved_relator_index
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0):
-        self.saved_vertex = 0
-        self.saved_relator_index = 0
         if num_relators > 0:
             # Maintain per-vertex state for each relator and its inverse.
             size = num_relators*max_degree
@@ -247,7 +245,8 @@ cdef class SimsNode(CoveringSubgraph):
         """
         cdef int n, v, l, i, slot
         cdef int rank=self.rank, degree = self.degree, max_degree = self.max_degree
-        cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
+        cdef unsigned char *incoming = self.incoming
+        cdef unsigned char *outgoing = self.outgoing
         cdef SimsNode new_subgraph
         cdef list children = []
         slot = self._first_empty_slot()
@@ -255,8 +254,11 @@ cdef class SimsNode(CoveringSubgraph):
             return children
         v = slot & 0xff
         l = slot >> 8
-        # Add edges with from this slot to all possible target slots.
         targets = []
+        # Add an edge to a new vertex if allowed. (It will be processed last.)
+        if degree < max_degree:
+            targets.append((l, v, degree + 1))
+        # Add edges with from this slot to all possible target slots.
         if l > 0:
             i = 0
             for n in range(degree):
@@ -271,11 +273,6 @@ cdef class SimsNode(CoveringSubgraph):
                 i += rank
                 if t == 0:
                     targets.append((l, v, n+1))
-        # Also add an edge to a new vertex if allowed.
-        if degree < max_degree:
-            targets.append((l, v, degree + 1))
-        self.saved_vertex = 0
-        self.saved_relator_index = 0
         for l, v, n in targets:
             new_subgraph = tree.model
             self._copy_in_place(new_subgraph)
@@ -285,18 +282,26 @@ cdef class SimsNode(CoveringSubgraph):
                 children.append(new_subgraph.clone())
         return children
 
-    cdef int check_lifts(self, int start, int relator_index,
-                             CyclicallyReducedWord w, SimsNode child):
+    cdef relators_may_lift(self, SimsNode child, SimsTree tree):
+        """
+        Check that when any relator is lifted to a vertex of a child graph it
+        either lifts to a loop or runs into a missing edge. This subgraph uses
+        its saved state as the starting point for checking the child.
+        """
+        cdef CyclicallyReducedWord w
         cdef char l
         cdef unsigned char index, vertex, save, length
-        cdef int rank = child.rank, max_degree = child.max_degree, degree=child.degree
-        cdef int v = start, i = 0, j, base = relator_index*max_degree
-        length = w.length
-        while True:
-            # Check whether the relator w lifts to a loop at vertex v + 1.
-            j = base + v
-            index = self.lift_indices[j]
-            if index < length:
+        cdef int n = 0, v, i = 0, j
+        cdef int rank = child.rank, max_degree = child.max_degree
+        for w in tree.relators:
+            length = w.length
+            for v in range(child.degree):
+                # Check whether relator n lifts to a loop at vertex v + 1.
+                j = n*max_degree + v
+                index = self.lift_indices[j]
+                if index >= length:
+                    # We already checked that the relator lifts to a loop.
+                    continue
                 vertex = self.lift_vertices[j]
                 if vertex == 0:
                     # The state is uninitialized.
@@ -322,37 +327,8 @@ cdef class SimsNode(CoveringSubgraph):
                         child.lift_indices[j] = length
                     else:
                         # No.  Discard this child.
-                        return v + 1
-            v += 1
-            if v == degree:
-                v = 0
-            if v == start:
-                break
-        return 0
-
-    cdef relators_may_lift(SimsNode self, SimsNode child, SimsTree tree):
-        """
-        Check that when any relator is lifted to a vertex of a child graph it
-        either lifts to a loop or runs into a missing edge. This subgraph uses
-        its saved state as the starting point for checking the child.
-        """
-        cdef int relator_index = 0, start = self.saved_vertex, vertex, skip = -1
-        cdef int saved_relator_index = self.saved_relator_index
-        if self.saved_vertex or self.saved_relator_index:
-            w = tree.relators[relator_index]
-            vertex = self.check_lifts(start, relator_index, w, child)
-            if vertex == 0:
-                skip = relator_index
-            else:
-                return False
-        for w in tree.relators:
-            if relator_index != skip:
-                vertex = self.check_lifts(start, relator_index, w, child)
-                if vertex:
-                    self.saved_vertex = vertex - 1
-                    self.saved_relator_index = relator_index
-                    return False
-            relator_index += 1
+                        return False
+            n += 1
         return True
 
     cdef may_be_minimal(self, SimsTree tree):
