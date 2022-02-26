@@ -157,7 +157,8 @@ cdef class CoveringSubgraph:
     cdef first_empty_slot(self):
         cdef int v, l
         cdef div_t qr
-        cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
+        cdef unsigned char *incoming = self.incoming
+        cdef unsigned char *outgoing = self.outgoing
         for n in range(self.rank*self.degree):
             if outgoing[n] == 0:
                 qr = div(n, self.rank)
@@ -174,7 +175,8 @@ cdef class CoveringSubgraph:
     cdef int _first_empty_slot(self):
         cdef int v, l
         cdef div_t qr
-        cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
+        cdef unsigned char *incoming = self.incoming
+        cdef unsigned char *outgoing = self.outgoing
         for n in range(self.rank*self.degree):
             if outgoing[n] == 0:
                 qr = div(n, self.rank)
@@ -243,7 +245,8 @@ cdef class SimsNode(CoveringSubgraph):
         """
         cdef int n, v, l, i, slot
         cdef int rank=self.rank, degree = self.degree, max_degree = self.max_degree
-        cdef unsigned char *incoming = self.incoming, *outgoing = self.outgoing
+        cdef unsigned char *incoming = self.incoming
+        cdef unsigned char *outgoing = self.outgoing
         cdef SimsNode new_subgraph
         cdef list children = []
         slot = self._first_empty_slot()
@@ -251,8 +254,11 @@ cdef class SimsNode(CoveringSubgraph):
             return children
         v = slot & 0xff
         l = slot >> 8
-        # Add edges with from this slot to all possible target slots.
         targets = []
+        # Add an edge to a new vertex if allowed. (It will be processed last.)
+        if degree < max_degree:
+            targets.append((l, v, degree + 1))
+        # Add edges with from this slot to all possible target slots.
         if l > 0:
             i = 0
             for n in range(degree):
@@ -267,9 +273,6 @@ cdef class SimsNode(CoveringSubgraph):
                 i += rank
                 if t == 0:
                     targets.append((l, v, n+1))
-        # Also add an edge to a new vertex if allowed.
-        if degree < max_degree:
-            targets.append((l, v, degree + 1))
         for l, v, n in targets:
             new_subgraph = tree.model
             self._copy_in_place(new_subgraph)
