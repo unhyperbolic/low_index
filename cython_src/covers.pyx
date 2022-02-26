@@ -465,7 +465,7 @@ cdef class SimsTreeIterator:
                 return None
             top, sprouts = self.stack[-1]
             if top._is_complete():
-                return self.pop()[0]
+                return self.pop()
             if sprouts:
                 # This gives the previous order
                 # self.push(sprouts.pop(0))
@@ -476,7 +476,7 @@ cdef class SimsTreeIterator:
                         return None
                     top, sprouts = self.stack[-1]
                     if not sprouts:
-                        self.pop()
+                        self.pop(recycle=1)
                     else:
                         break
 
@@ -488,15 +488,15 @@ cdef class SimsTreeIterator:
         sprouts = cached.sprout(self.tree)
         self.stack.append((cached, sprouts))
 
-    cdef pop(SimsTreeIterator self):
+    cdef pop(SimsTreeIterator self, int recycle=0):
         cdef SimsNode top
         cdef list sprouts
         top, sprouts = self.stack.pop()
-        cdef SimsNode result = SimsNode(self.rank, self.max_degree,
-            self.num_relators)
-        top._copy_in_place(result)
         self.cache.append(top)
-        return (result, sprouts)
+        if recycle == 0:
+            result = SimsNode(self.rank, self.max_degree, self.num_relators)
+            top._copy_in_place(result)
+            return result
 
 cdef class SimsTree:
     """
