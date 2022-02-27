@@ -219,8 +219,7 @@ cdef class SimsNode(CoveringSubgraph):
         return result[:-1]
 
     cdef clone(self):
-        cdef result = SimsNode(self.rank, self.max_degree,
-                                   self.num_relators)
+        cdef result = SimsNode(self.rank, self.max_degree, self.num_relators)
         self._copy_in_place(result)
         return result
 
@@ -274,12 +273,14 @@ cdef class SimsNode(CoveringSubgraph):
                 if t == 0:
                     targets.append((l, v, n+1))
         for l, v, n in targets:
-            new_subgraph = tree.model
+            new_subgraph = tree.get_node()
             self._copy_in_place(new_subgraph)
             new_subgraph.add_edge(l, v, n)
             if (self.relators_may_lift(new_subgraph, tree)
                 and new_subgraph.may_be_minimal(tree)):
-                children.append(new_subgraph.clone())
+                children.append(new_subgraph)
+            else:
+                tree.cache.append(new_subgraph)
         return children
 
     cdef relators_may_lift(self, SimsNode child, SimsTree tree):
@@ -436,7 +437,7 @@ cdef class SimsNode(CoveringSubgraph):
 
 cdef class SimsTreeIterator:
     cdef SimsTree tree
-    cdef list stack, cache
+    cdef list stack
     cdef int rank, max_degree, num_relators
 
     def __init__(self, SimsTree tree):
@@ -445,15 +446,12 @@ cdef class SimsTreeIterator:
         self.max_degree = tree.max_degree
         self.num_relators = len(tree.relators)
         self.stack = []
-        self.cache = []
-        for n in range(self.rank*self.max_degree + 1):
-            self.cache.append(
-                SimsNode(self.rank, self.max_degree, self.num_relators))
         self.push(tree.root)
 
     def __next__(self):
         node = self._next()
         if node is None:
+            self.tree.cache = []
             raise StopIteration
         return node
 
@@ -465,10 +463,10 @@ cdef class SimsTreeIterator:
                 return None
             top, sprouts = self.stack[-1]
             if top._is_complete():
-                return self.pop()
+                node = self.pop()
+                self.tree.cache.append(node)
+                return node.clone()
             if sprouts:
-                # This gives the previous order
-                # self.push(sprouts.pop(0))
                 self.push(sprouts.pop())
             else:
                 while True:
@@ -482,21 +480,16 @@ cdef class SimsTreeIterator:
 
     cdef push(SimsTreeIterator self, SimsNode node):
         cdef list sprouts
-        cdef SimsNode cached
-        cached = self.cache.pop()
-        node._copy_in_place(cached)
-        sprouts = cached.sprout(self.tree)
-        self.stack.append((cached, sprouts))
+        sprouts = node.sprout(self.tree)
+        self.stack.append((node, sprouts))
 
     cdef pop(SimsTreeIterator self, int recycle=0):
         cdef SimsNode top
         cdef list sprouts
         top, sprouts = self.stack.pop()
-        self.cache.append(top)
         if recycle == 0:
-            result = SimsNode(self.rank, self.max_degree, self.num_relators)
-            top._copy_in_place(result)
-            return result
+            return top
+        self.tree.cache.append(top)
 
 cdef class SimsTree:
     """
@@ -552,8 +545,9 @@ cdef class SimsTree:
     cdef char done
     cdef public list nodes
     cdef public list relators
+    cdef int num_relators
+    cdef list cache
     # Workspaces used by SimsNodes when checking minimality
-    cdef SimsNode model
     cdef unsigned char *std_to_alt
     cdef unsigned char *alt_to_std
 
@@ -573,14 +567,19 @@ cdef class SimsTree:
         if strategy == 'spin_short':
             relators = self.spin_short_relators(relators)
         self.relators = [CyclicallyReducedWord(r, self.rank) for r in relators]
+        self.num_relators = len(self.relators)
         self.root = SimsNode(rank=rank, max_degree=max_degree,
-                                         num_relators=len(self.relators))
-        self.model = SimsNode(rank=rank, max_degree=max_degree,
-                                         num_relators=len(self.relators))
-        self.nodes = [self.root]
+                                 num_relators=self.num_relators)
+        self.nodes = [self.root] #XXX Used by the bloom method
+        self.cache = []
 
     def __iter__(self):
         return SimsTreeIterator(self)
+
+    cdef get_node(self):
+        if self.cache:
+            return self.cache.pop()
+        return SimsNode(self.rank, self.max_degree, self.num_relators)
 
     cdef spin(self, str word):
         return [word[k:] + word[:k] for k in range(len(word))]
