@@ -104,7 +104,7 @@ cdef class CoveringSubgraph:
     cpdef is_complete(self):
         return self.num_edges == self.rank*self.degree
 
-    cdef _is_complete(self):
+    cdef inline _is_complete(self):
         return self.num_edges == self.rank*self.degree
 
     cdef add_edge(self, int letter, int from_vertex, int to_vertex):
@@ -172,7 +172,7 @@ cdef class CoveringSubgraph:
                 return (v + 1, -(l + 1))
         return (0,0)
 
-    cdef int _first_empty_slot(self):
+    cdef inline int _first_empty_slot(self):
         cdef int v, l
         cdef div_t qr
         cdef unsigned char *incoming = self.incoming
@@ -243,7 +243,9 @@ cdef class SimsNode(CoveringSubgraph):
         the subgraph obtained by adding that edge.  Return the list of new nodes.
         """
         cdef int n, v, l, i, slot
-        cdef int rank=self.rank, degree = self.degree, max_degree = self.max_degree
+        cdef int rank=self.rank
+        cdef int degree = self.degree
+        cdef int max_degree = self.max_degree
         cdef unsigned char *incoming = self.incoming
         cdef unsigned char *outgoing = self.outgoing
         cdef SimsNode new_subgraph
@@ -285,7 +287,7 @@ cdef class SimsNode(CoveringSubgraph):
 
     cdef relators_may_lift(self, SimsNode child, SimsTree tree):
         """
-        Check that when any relator is lifted to a vertex of a child graph it
+        Check that when any relator is lifted to any vertex of a child graph it
         either lifts to a loop or runs into a missing edge. This subgraph uses
         its saved state as the starting point for checking the child.
         """
@@ -384,11 +386,12 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char *outgoing = self.outgoing
         cdef unsigned char *incoming = self.incoming
         for basepoint in range(2, degree + 1):
-            # We are working with the standard indexing (determined by basepoint
-            # 1) and an alternate indexing determined by another basepoint.  We
-            # construct mappings between the two indexings and store them in the
-            # arrays std_to_alt and alt_to_std. (Ignore the 0 entry due to
-            # 1-based indexing).
+            # We are working with the standard indexing (determined by putting
+            # the basepoint at vertex 1) and an alternate indexing determined by
+            # a different basepoint.  We construct mappings between the two
+            # indexings and store them in the arrays std_to_alt and
+            # alt_to_std. (For convenience when dealing with 1-based indices,
+            # just ignore the 0 entry).
             memset(std_to_alt, 0, degree + 1)
             # It is not necessary to clear alt_to_std
             #memset(alt_to_std, 0, degree + 1)
@@ -414,9 +417,9 @@ cdef class SimsNode(CoveringSubgraph):
                     break
                 # Update the mappings.
                 if std_to_alt[b] == 0:
-                    # This edge is the first with respect to the alternate indexing
-                    # that is incident to the vertex with standard index b.  We now
-                    # know its alternate index.
+                    # This edge is the first, with respect to the alternate
+                    # indexing, that is incident to the vertex with standard
+                    # index b.  We now know its alternate index.
                     max_index += 1
                     std_to_alt[b] = max_index
                     alt_to_std[max_index] = b
@@ -449,29 +452,35 @@ cdef class SimsTreeIterator:
         self.push(tree.root)
 
     def __next__(self):
-        node = self._next()
+        cdef node = self._next()
         if node is None:
             self.tree.cache = []
             raise StopIteration
         return node
 
-    cdef _next(self):
+    cdef inline _next(self):
         cdef list sprouts
         cdef SimsNode top, node
         while True:
             if not self.stack:
                 return None
+            # Peek at the top of the stack.
             top, sprouts = self.stack[-1]
+            # If the top graph is complete, pop it, cache it, and clone it.
             if top._is_complete():
                 node = self.pop()
                 self.tree.cache.append(node)
                 return node.clone()
+            # If there are unvisited children, visit the next one.
             if sprouts:
                 self.push(sprouts.pop())
+            # Otherwise, ascend to a node with unvisited children.  Be sure
+            # to cache any nodes that get popped from our stack.
             else:
                 while True:
                     if not self.stack:
                         return None
+                    # Take a peek to see if there are unvisited children.
                     top, sprouts = self.stack[-1]
                     if not sprouts:
                         self.pop(recycle=1)
@@ -479,8 +488,7 @@ cdef class SimsTreeIterator:
                         break
 
     cdef push(SimsTreeIterator self, SimsNode node):
-        cdef list sprouts
-        sprouts = node.sprout(self.tree)
+        cdef list sprouts = node.sprout(self.tree)
         self.stack.append((node, sprouts))
 
     cdef pop(SimsTreeIterator self, int recycle=0):
@@ -503,14 +511,14 @@ cdef class SimsTree:
     can be viewed as a tree, where the children of a node are obtained by adding
     one edge at the first empty slot.  However, only the tips of the tree are of
     interest.  So we can implement the "tree" as a python list.  Each pass
-    through the loop in the bloom method generates a new list by replacing each
-    subgraph by a list of subgraphs obtained by adding edges.  This turns out to
-    be very memory intensive, since these lists grow very large before finally
-    collapsing at the end of the computation.  We also provide an iterator which
-    iterates through the tips of the tree while using a constant amount of
-    memory.  The depth of the tree is bounded by the number of edges in a cover
-    of the maximal allowed degree.  Traversal of the tree in depth-first order
-    only requires a stack of size equal to the maximum depth.
+    through the loop in the (currently unused) bloom method generates a new list
+    by replacing each subgraph by a list of subgraphs obtained by adding edges.
+    This turns out to be very memory intensive, since these lists grow very
+    large before finally collapsing at the end of the computation.  We also
+    provide an iterator which iterates through the tips of the tree while using
+    a constant amount of memory.  The depth of the tree is bounded by the number
+    of edges in a cover of the maximal allowed degree.  Traversal of the tree in
+    depth-first order only requires a stack of size equal to the maximum depth.
 
     >>> from fpgroups import *
     >>> t = SimsTree(rank=1, max_degree=3).list()
@@ -547,7 +555,7 @@ cdef class SimsTree:
     cdef public list relators
     cdef int num_relators
     cdef list cache
-    # Workspaces used by SimsNodes when checking minimality
+    # Temporary workspace used by SimsNodes when checking minimality.
     cdef unsigned char *std_to_alt
     cdef unsigned char *alt_to_std
 
@@ -576,7 +584,11 @@ cdef class SimsTree:
     def __iter__(self):
         return SimsTreeIterator(self)
 
-    cdef get_node(self):
+    cdef get_node(SimsTree self):
+        """
+        If possible, reuse cached SimsNodes to avoid needless construction
+        and destruction of nodes.
+        """
         if self.cache:
             return self.cache.pop()
         return SimsNode(self.rank, self.max_degree, self.num_relators)
@@ -597,7 +609,8 @@ cdef class SimsTree:
 
     cpdef list(self):
         """
-        Return a list created from this tree's iterator.
+        Return a list created from this tree's iterator.  We call the C
+        implementation of the iterator's next method directly.
         """
         cdef list result = []
         cdef SimsTreeIterator iterator = SimsTreeIterator(self)
@@ -609,14 +622,13 @@ cdef class SimsTree:
             result.append(node)
         return result
 
-    # This method uses lots of memory but is currently somewhat faster
-    # that the list method.  I am leaving it in place for comparison
-    # purposes, and because it might be useful if we decide to
-    # parallelize the computation.  Starting from a list containing
-    # only the root of the tree it iteratively replaces each node in
-    # the list with a sublist consisting of the children of the node.
-    # This list can grow to be very large, before collapsing as the
-    # nodes become complete.
+    # This method uses lots of memory but can be somewhat faster than the list
+    # method.  It is left in place for comparison purposes, and because it might
+    # be useful if we decide to parallelize the computation.  Starting from a
+    # list containing only the root of the tree it iteratively replaces each
+    # node in the list with a sublist consisting of the children of the node.
+    # This list can grow to be very large, before collapsing as the nodes become
+    # complete.
 
     cpdef bloom(self):
         cdef SimsNode tip
