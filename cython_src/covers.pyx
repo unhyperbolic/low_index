@@ -665,20 +665,23 @@ cdef class SimsTree:
             result.append(node)
         return result
 
-    def subtree_list(self, SimsTree subtree):
-        return subtree.list()
+    def subtree_list(self, int index):
+        cdef SimsTree tree = SimsTree(self.rank, self.max_degree,
+                relators=[str(r) for r in self.relators],
+                strategy=self.strategy)
+        cdef list subtrees = [tree.plant(node) for node in tree.bloom(2)]
+        return subtrees[index].list()
 
     def list_mp(self, cores):
         """
         Compute the list of covers with a pool of worker processes.
         """
-        context = get_mp_context('fork')
+        cdef int num_subtrees = len(self.bloom(2))
+        context = get_mp_context('spawn')
         pool = context.Pool(processes=cores)
-        subtrees = [self.plant(node) for node in self.bloom(2)]
         result = []
-        for node_list in pool.map(self.subtree_list, subtrees):
+        for node_list in pool.map(self.subtree_list, range(num_subtrees)):
             result += node_list
-        print('Check:', [len(t.list()) for t in subtrees])
         return result
     
     # This method uses lots of memory but can be somewhat faster than the list
