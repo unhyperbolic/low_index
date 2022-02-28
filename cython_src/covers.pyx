@@ -52,7 +52,10 @@ cdef class CoveringSubgraph:
     cdef unsigned char* outgoing
     cdef unsigned char* incoming
 
-    def __cinit__(self, int rank, int max_degree, int num_relators=0):
+    def __cinit__(self, int rank, int max_degree, int num_relators=0,
+                      bytes edge_data=b''):
+        cdef int n = 0, degree = 1
+        cdef unsigned char b
         self.degree = 1
         self.num_edges = 0
         self.rank = rank
@@ -63,6 +66,15 @@ cdef class CoveringSubgraph:
         memset(self.outgoing, 0, size)
         self.incoming = <unsigned char *>PyMem_Malloc(size)
         memset(self.incoming, 0, size)
+        if edge_data:
+            while n < size:
+                b = edge_data[n]
+                if b > degree:
+                    degree = b
+                self.outgoing[n] = b
+                self.incoming[b - 1] = n + 1
+                n += 1
+            self.degree = degree
 
     def __dealloc__(self):
         PyMem_Free(self.outgoing)
@@ -70,13 +82,22 @@ cdef class CoveringSubgraph:
 
     def __str__(self):
         cdef int t
-        result = 'Covering graph with edges:\n'
+        if self.is_complete():
+            result = 'Covering with edges:\n'
+        else:
+            result = 'Partial covering with edges:\n'
         for f in range(self.degree):
             for n in range(self.rank):
                  t = self.outgoing[f*self.rank + n]
                  if t:
                      result += '%d--%d->%d\n'%(f + 1, n + 1, t)
         return result[:-1]
+
+    def __reduce__(self):
+        cdef int size = self.rank*self.max_degree
+        return (self.__class__,
+                (self.rank, self.max_degree, self.num_relators,
+                     self.outgoing[:size]))
 
     def _data(self):
         print('out:', [n for n in self.outgoing[:self.rank*self.degree]])
@@ -88,7 +109,7 @@ cdef class CoveringSubgraph:
     def __hash__(self):
         return hash(self.__key__())
 
-    def __eq__(self, other):
+    def __eq__(SimsNode self, SimsNode other):
         if self.rank != other.rank:
             return False
         if self.degree != other.degree:
@@ -195,7 +216,8 @@ cdef class SimsNode(CoveringSubgraph):
     cdef unsigned char* lift_indices
     cdef unsigned char* lift_vertices
 
-    def __cinit__(self, int rank, int max_degree, int num_relators=0):
+    def __cinit__(self, int rank, int max_degree, int num_relators=0,
+                      bytes edge_data=b''):
         if num_relators > 0:
             # Maintain per-vertex state for each relator and its inverse.
             size = num_relators*max_degree
@@ -207,7 +229,7 @@ cdef class SimsNode(CoveringSubgraph):
     def __dealloc__(self):
         if self.num_relators:
             PyMem_Free(self.state_info)
-
+    
     def __str__(self):
         cdef int t
         result = 'Sims Node with edges:\n'
