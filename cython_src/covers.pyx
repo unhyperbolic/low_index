@@ -229,10 +229,10 @@ cdef class SimsNode(CoveringSubgraph):
     def __dealloc__(self):
         if self.num_relators:
             PyMem_Free(self.state_info)
-    
+
     def __str__(self):
         cdef int t
-        result = 'Sims Node with edges:\n'
+        result = 'SimsNode with edges:\n'
         for f in range(self.degree):
             for n in range(self.rank):
                  t = self.outgoing[f*self.rank + n]
@@ -575,6 +575,7 @@ cdef class SimsTree:
     cdef char done
     cdef public list nodes
     cdef public list relators
+    cdef public str strategy
     cdef int num_relators
     cdef list cache
     # Temporary workspace used by SimsNodes when checking minimality.
@@ -582,7 +583,7 @@ cdef class SimsTree:
     cdef unsigned char *alt_to_std
 
     def __cinit__(self,  int rank=1, int max_degree=1, relators=[],
-                      strategy=None):
+                      strategy=None, root=None):
         self.std_to_alt = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
         self.alt_to_std = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
 
@@ -591,20 +592,32 @@ cdef class SimsTree:
         PyMem_Free(self.alt_to_std)
 
     def __init__(self, int rank=1, int max_degree=1, relators=[],
-                     strategy=None):
+                     strategy=None, root=None):
         self.rank = rank
         self.max_degree = max_degree
+        self.strategy = strategy
         if strategy == 'spin_short':
             relators = self.spin_short_relators(relators)
         self.relators = [CyclicallyReducedWord(r, self.rank) for r in relators]
         self.num_relators = len(self.relators)
-        self.root = SimsNode(rank=rank, max_degree=max_degree,
+        if root:
+            self.root = root
+        else:
+            self.root = SimsNode(rank=rank, max_degree=max_degree,
                                  num_relators=self.num_relators)
-        self.nodes = [self.root] #XXX Used by the bloom method
+        self.nodes = [self.root]
         self.cache = []
 
     def __iter__(self):
         return SimsTreeIterator(self)
+
+    def plant(self, SimsNode node):
+        """
+        Construct a SimsTree with the given node as its root, using the
+        same rank, max_degree, relators and strategy.
+        """
+        cdef list relators = [str(r) for r in self.relators]
+        return SimsTree(self.rank, self.max_degree, relators, root=node)
 
     cdef get_node(SimsTree self):
         """
@@ -652,9 +665,9 @@ cdef class SimsTree:
     # This list can grow to be very large, before collapsing as the nodes become
     # complete.
 
-    cpdef bloom(self):
+    cpdef bloom(self, int depth=0):
         cdef SimsNode tip
-        cdef int count = 0
+        cdef int count = 0, level = 0
         cdef list new_nodes
         cdef list sprouts
         while True:
@@ -670,4 +683,7 @@ cdef class SimsTree:
             if count == 0:
                 break
             self.nodes = new_nodes
+            if depth and level > depth:
+                break
+            level += 1
         return self.nodes
