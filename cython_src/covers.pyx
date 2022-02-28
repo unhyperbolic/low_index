@@ -569,10 +569,9 @@ cdef class SimsTree:
     3--1->3
     3--2->1
     """
-    cdef int rank
-    cdef int max_degree
-    cdef SimsNode root
-    cdef char done
+    cdef public int rank
+    cdef public int max_degree
+    cdef public SimsNode root
     cdef public list nodes
     cdef public list relators
     cdef public str strategy
@@ -600,7 +599,9 @@ cdef class SimsTree:
             relators = self.spin_short_relators(relators)
         self.relators = [CyclicallyReducedWord(r, self.rank) for r in relators]
         self.num_relators = len(self.relators)
-        if root:
+        if isinstance(root, bytes):
+            self.root = pickle.loads(root)
+        elif isinstance(root, SimsNode):
             self.root = root
         else:
             self.root = SimsNode(rank=rank, max_degree=max_degree,
@@ -611,6 +612,13 @@ cdef class SimsTree:
     def __iter__(self):
         return SimsTreeIterator(self)
 
+    def __reduce__(self):
+        relators = [str(r) for r in self.relators]
+        return (self.__class__,
+                (self.rank, self.max_degree, relators, self.strategy,
+                pickle.dumps(self.root))
+                )
+                     
     def plant(self, SimsNode node):
         """
         Construct a SimsTree with the given node as its root, using the
@@ -657,6 +665,22 @@ cdef class SimsTree:
             result.append(node)
         return result
 
+    def subtree_list(self, SimsTree subtree):
+        return subtree.list()
+
+    def list_mp(self, cores):
+        """
+        Compute the list of covers with a pool of worker processes.
+        """
+        context = get_mp_context('fork')
+        pool = context.Pool(processes=cores)
+        subtrees = [self.plant(node) for node in self.bloom(2)]
+        result = []
+        for node_list in pool.map(self.subtree_list, subtrees):
+            result += node_list
+        print('Check:', [len(t.list()) for t in subtrees])
+        return result
+    
     # This method uses lots of memory but can be somewhat faster than the list
     # method.  It is left in place for comparison purposes, and because it might
     # be useful if we decide to parallelize the computation.  Starting from a
