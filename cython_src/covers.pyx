@@ -599,6 +599,7 @@ cdef class SimsTree:
     cdef public SimsNode root
     cdef public list nodes
     cdef public list relators
+    cdef public list orig_relators
     cdef public str strategy
     cdef int num_relators
     cdef list cache
@@ -620,6 +621,7 @@ cdef class SimsTree:
         self.rank = rank
         self.max_degree = max_degree
         self.strategy = strategy
+        self.orig_relators = [r for r in relators]
         if strategy == 'spin_short':
             relators = self.spin_short_relators(relators)
         self.relators = [CyclicallyReducedWord(r, self.rank) for r in relators]
@@ -690,34 +692,32 @@ cdef class SimsTree:
             result.append(node)
         return result
 
-    def subtree_list(self, int index):
-        cdef SimsTree tree = SimsTree(self.rank, self.max_degree,
-                relators=[str(r) for r in self.relators],
-                strategy=self.strategy)
-        cdef list subtrees = [tree.plant(node) for node in tree.bloom(2)]
-        return subtrees[index].list()
-
-    def list_mp(self, cores):
+    def list_mp(self, int depth=2):
         """
         Compute the list of covers with a pool of worker processes.
         """
-        cdef int num_subtrees = len(self.bloom(2))
-        context = get_mp_context('spawn')
-        pool = context.Pool(processes=cores)
         result = []
-        for node_list in pool.map(self.subtree_list, range(num_subtrees)):
-            result += node_list
+        relator_strings = [str(r) for r in self.orig_relators]
+        args = [sys.executable, multi.__file__, str(self.rank),
+                str(self.max_degree), str(depth)] + relator_strings
+        output = run(args, capture_output=True, encoding='ascii')
+        for line in output.stdout.split('\n'):
+            if line:
+                p = eval(line)
+                result.append(pickle.loads(p))
         return result
 
-    # This method uses lots of memory but can be somewhat faster than the list
-    # method.  It is left in place for comparison purposes, and because it might
-    # be useful if we decide to parallelize the computation.  Starting from a
-    # list containing only the root of the tree it iteratively replaces each
+    # This method uses too much memory to be used in the list method, but is
+    # used to seed the multiprocessing list method.  Starting from a list
+    # containing only the root node of a SimsTree it iteratively replaces each
     # node in the list with a sublist consisting of the children of the node.
-    # This list can grow to be very large, before collapsing as the nodes become
-    # complete.
 
     cpdef bloom(self, int depth=0):
+        """
+        Return a list of all nodes which are either complete with depth at most
+        the parameter value, or not complete with depth equal to the depth
+        parameter.
+        """
         cdef SimsNode tip
         cdef int count = 0, level = 0
         cdef list new_nodes
