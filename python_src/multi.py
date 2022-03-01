@@ -11,7 +11,7 @@ def main(rank, max_degree, depth, relators):
     else:
         context = multiprocessing.get_context('spawn')
     pool = context.Pool(multiprocessing.cpu_count())
-    tree = fpgroups.SimsTree(rank, max_degree, relators)
+    tree = fpgroups.SimsTree(rank, max_degree, relators, 'spin_short')
     nodes = tree.bloom(depth)
     inputs = [(rank, max_degree, relators, 'spin_short', node) for node in nodes]
     subgroups = sum(pool.map(subtree_list, inputs), [])
