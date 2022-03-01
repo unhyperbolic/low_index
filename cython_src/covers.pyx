@@ -128,6 +128,23 @@ cdef class CoveringSubgraph:
     def __lt__(self, other):
         return self.__key__() < other.__key__()
 
+    cpdef permutation_rep(self):
+        """
+        Return the permutation representation associated to this cover as a list
+        of lists.  This representation gives the right action on vertices
+        obtained by lifting each of the directed loops in 1-vertex graph which
+        is the target of the covering map.  Each permutation is represented
+        as a list of integers in [0, degree - 1] and there is one permutation
+        for each generator of the group.
+        """
+        cdef int l, v, rank = self.rank, degree = self.degree
+        cdef list rep = []
+        if not self._is_complete():
+            raise ValueError('The graph is not a covering.')
+        for l in range(self.rank):
+            rep.append([self.outgoing[v*rank + l] - 1 for v in range(degree)])
+        return rep
+
     cpdef is_complete(self):
         return self.num_edges == self.rank*self.degree
 
@@ -608,7 +625,7 @@ cdef class SimsTree:
     cdef unsigned char *alt_to_std
 
     def __cinit__(self,  int rank=1, int max_degree=1, relators=[],
-                      strategy=None, root=None):
+                      strategy="spin_short", root=None):
         self.std_to_alt = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
         self.alt_to_std = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
 
