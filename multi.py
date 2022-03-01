@@ -1,6 +1,6 @@
 import fpgroups, pickle, time, sys, multiprocessing
 
-degree = 7
+degree = 8
 rels = ['aaBcbbcAc', 'aacAbCBBaCAAbbcBc']
 def plant(sims_node):
     return fpgroups.SimsTree(3, degree, rels, 'spin_short', sims_node).list()
@@ -14,7 +14,7 @@ if __name__ == '__main__':
     t = fpgroups.SimsTree(3, degree, rels, 'spin_short')
     blooms = t.bloom(6)
     print('bloom count:', len(blooms))
-    pool = multiprocessing.Pool(8)
+    pool = multiprocessing.Pool(multiprocessing.cpu_count())
     start = time.time()
     ans = sum(pool.map(plant, blooms), [])
     print('final count:', len(ans))
