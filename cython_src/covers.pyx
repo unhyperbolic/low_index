@@ -53,7 +53,8 @@ cdef class CoveringSubgraph:
     cdef unsigned char* incoming
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0,
-                      bytes edge_data=b''):
+                  bytes outgoing=b'', bytes incoming=b'',
+                  bytes lift_indices=b'', bytes lift_vertices=b''):
         cdef int n = 0, degree = 1
         cdef unsigned char b
         self.degree = 1
@@ -66,14 +67,19 @@ cdef class CoveringSubgraph:
         memset(self.outgoing, 0, size)
         self.incoming = <unsigned char *>PyMem_Malloc(size)
         memset(self.incoming, 0, size)
-        if edge_data:
+        if outgoing:
             while n < size:
-                b = edge_data[n]
+                b = outgoing[n]
                 if b > degree:
                     degree = b
                 self.outgoing[n] = b
-                self.incoming[b - 1] = n + 1
+                c = incoming[n]
+                self.incoming[n] = c
+                if c > degree:
+                    degree = c
                 n += 1
+                if b > 0:
+                    self.num_edges += 1
             self.degree = degree
 
     def __dealloc__(self):
@@ -97,7 +103,7 @@ cdef class CoveringSubgraph:
         cdef int size = self.rank*self.max_degree
         return (self.__class__,
                 (self.rank, self.max_degree, self.num_relators,
-                     self.outgoing[:size]))
+                     self.outgoing[:size], self.incoming[:size]))
 
     def _data(self):
         print('out:', [n for n in self.outgoing[:self.rank*self.degree]])
@@ -217,7 +223,9 @@ cdef class SimsNode(CoveringSubgraph):
     cdef unsigned char* lift_vertices
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0,
-                      bytes edge_data=b''):
+                  bytes outgoing=b'', bytes incoming=b'',
+                  bytes lift_indices=b'', bytes lift_vertices=b''):
+        cdef int n
         if num_relators > 0:
             # Maintain per-vertex state for each relator and its inverse.
             size = num_relators*max_degree
@@ -225,6 +233,15 @@ cdef class SimsNode(CoveringSubgraph):
             memset(self.state_info, 0, 2*size)
             self.lift_indices = self.state_info
             self.lift_vertices = &self.state_info[size]
+
+            if lift_indices:
+                for n, c in enumerate(lift_indices):
+                    self.state_info[n] = c
+
+            if lift_vertices:
+                for n, c in enumerate(lift_vertices):
+                    self.state_info[size + n] = c
+
 
     def __dealloc__(self):
         if self.num_relators:
@@ -239,6 +256,14 @@ cdef class SimsNode(CoveringSubgraph):
                  if t:
                      result += '%d--%d->%d\n'%(f + 1, n + 1, t)
         return result[:-1]
+
+    def __reduce__(self):
+        cdef int size = self.rank*self.max_degree
+        data = (self.rank, self.max_degree, self.num_relators,
+                self.outgoing[:size], self.incoming[:size])
+        if self.num_relators:
+            data = data + (self.lift_indices[:size], self.lift_vertices[:size])
+        return (self.__class__, data)
 
     cdef clone(self):
         cdef result = SimsNode(self.rank, self.max_degree, self.num_relators)
@@ -618,7 +643,7 @@ cdef class SimsTree:
                 (self.rank, self.max_degree, relators, self.strategy,
                 pickle.dumps(self.root))
                 )
-                     
+
     def plant(self, SimsNode node):
         """
         Construct a SimsTree with the given node as its root, using the
@@ -683,7 +708,7 @@ cdef class SimsTree:
         for node_list in pool.map(self.subtree_list, range(num_subtrees)):
             result += node_list
         return result
-    
+
     # This method uses lots of memory but can be somewhat faster than the list
     # method.  It is left in place for comparison purposes, and because it might
     # be useful if we decide to parallelize the computation.  Starting from a
