@@ -1,4 +1,4 @@
-import fpgroups, pickle, time
+import fpgroups, pickle, time, sys
 
 degree = 7
 rels = ['aaBcbbcAc', 'aacAbCBBaCAAbbcBc']
@@ -15,10 +15,10 @@ print('bloom count:', len(blooms))
 def plant(sims_node):
     return fpgroups.SimsTree(3, degree, rels, 'spin_short', sims_node).list()
 
-
 import multiprocessing
+if sys.platform == 'darwin':
+    multiprocessing.set_start_method('fork')
 pool = multiprocessing.Pool(8)
-
 start = time.time()
 ans = sum(pool.map(plant, blooms), [])
 print('final count:', len(ans))
