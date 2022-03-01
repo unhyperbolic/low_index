@@ -14,8 +14,8 @@ Here is a sample computation:
 .. code-block:: python
 
     >>> from fpgroups import *
-    >>>  # Conjugacy classes of index 4 subgroups of F_3: 
-    >>> sgps = SimsTree(3, 4).list()
+    >>>  # Conjugacy classes of subgroups of F_3 with index at most 4: 
+    >>> sgps = SimsTree(rank=3, max_degree=4).list()
     >>> len(sgps)
     653
     >>> from snappy import *
@@ -26,8 +26,8 @@ Here is a sample computation:
     Relators:
        aaBcbbcAc
        aacAbCBBaCAAbbcBc
-    >>> # Degree 7 covers of the exterior of the Conway knot:
-    >>> sgps = SimsTree(G.num_generators(), 7, G.relators()).list()
+    >>> # Degree at most 7 covers of the exterior of the Conway knot:
+    >>> sgps = SimsTree(rank=G.num_generators(), max_degree=7, relators=G.relators()).list()
     >>> len(sgps) 
     52
     >>> sgps[25].permutation_rep()
