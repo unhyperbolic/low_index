@@ -12,9 +12,11 @@ def main(rank, max_degree, depth, relators):
         context = multiprocessing.get_context('spawn')
     pool = context.Pool(multiprocessing.cpu_count())
     tree = fpgroups.SimsTree(rank, max_degree, relators, 'spin_short')
-    nodes = tree.bloom(depth)
+    level = tree.bloom(depth)
+    nodes = [n for n in level if not n.is_complete()]
+    subgroups = [n for n in level if n.is_complete()]
     inputs = [(rank, max_degree, relators, 'spin_short', node) for node in nodes]
-    subgroups = sum(pool.map(subtree_list, inputs), [])
+    subgroups += sum(pool.map(subtree_list, inputs), [])
     for subgroup in subgroups:
         print(pickle.dumps(subgroup))
 
