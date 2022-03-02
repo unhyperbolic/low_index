@@ -712,14 +712,14 @@ cdef class SimsTree:
             result.append(node)
         return result
 
-    cpdef list_mp(self, int depth=2):
+    cpdef list_mp(self, int target_size=1000):
         """
         Compute the list of covers with a pool of worker processes.
         """
         result = []
         relator_strings = [str(r) for r in self.orig_relators]
         args = [sys.executable, multi.__file__, str(self.rank),
-                str(self.max_degree), str(depth)] + relator_strings
+                str(self.max_degree), str(target_size)] + relator_strings
         output = run(args, capture_output=True, encoding='ascii')
         for line in output.stdout.split('\n'):
             if line:
@@ -728,18 +728,16 @@ cdef class SimsTree:
         return result
 
     # This method uses too much memory to be used in the list method, but is
-    # used to seed the multiprocessing list method.  Starting from a list
-    # containing only the root node of a SimsTree it iteratively replaces each
-    # node in the list with a sublist consisting of the children of the node.
+    # used to seed the multiprocessing list method.
 
-    cpdef bloom(self, int depth=0):
+    cpdef bloom(self, int target_size=1000):
         """
-        Return a list of all nodes which are either complete with depth at most
-        the parameter value, or not complete with depth equal to the depth
-        parameter.
+        Return a list of nodes created by iteratively replacing each node
+        with a sublist consisting of its children.  Return the list as soon
+        as it exceeds the target size.
         """
         cdef SimsNode tip
-        cdef int count = 0, level = 0
+        cdef int count = 0
         cdef list new_nodes
         cdef list sprouts
         while True:
@@ -755,7 +753,6 @@ cdef class SimsTree:
             if count == 0:
                 break
             self.nodes = new_nodes
-            if depth and level > depth:
+            if target_size and len(new_nodes) > target_size:
                 break
-            level += 1
         return self.nodes

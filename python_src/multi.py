@@ -6,16 +6,16 @@ def subtree_list(data):
     return fpgroups.SimsTree(rank, max_degree, rels, strategy,
                                  sims_node).list_1p()
 
-def main(rank, max_degree, depth, relators):
+def main(rank, max_degree, bloom_size, relators):
     if sys.platform != 'win32':
         context = multiprocessing.get_context('fork')
     else:
         context = multiprocessing.get_context('spawn')
     pool = context.Pool(multiprocessing.cpu_count())
     tree = fpgroups.SimsTree(rank, max_degree, relators, 'spin_short')
-    level = tree.bloom(depth)
-    nodes = [n for n in level if not n.is_complete()]
-    subgroups = [n for n in level if n.is_complete()]
+    stems = tree.bloom(bloom_size)
+    nodes = [n for n in stems if not n.is_complete()]
+    subgroups = [n for n in stems if n.is_complete()]
     inputs = [(rank, max_degree, relators, 'spin_short', node)
                   for node in nodes]
     subgroups += sum(pool.map(subtree_list, inputs), [])
@@ -23,6 +23,6 @@ def main(rank, max_degree, depth, relators):
         print(pickle.dumps(subgroup))
 
 if __name__ == '__main__':
-    rank, max_degree, depth = (int(arg) for arg in sys.argv[1:4])
+    rank, max_degree, bloom_size = (int(arg) for arg in sys.argv[1:4])
     relators = sys.argv[4:]
-    main(rank, max_degree, depth, relators)
+    main(rank, max_degree, bloom_size, relators)
