@@ -3,7 +3,8 @@ import multiprocessing
 
 def subtree_list(data):
     rank, max_degree, rels, strategy, sims_node = data
-    return fpgroups.SimsTree(rank, max_degree, rels, strategy, sims_node).list()
+    return fpgroups.SimsTree(rank, max_degree, rels, strategy,
+                                 sims_node).list_1p()
 
 def main(rank, max_degree, depth, relators):
     if sys.platform != 'win32':
@@ -15,7 +16,8 @@ def main(rank, max_degree, depth, relators):
     level = tree.bloom(depth)
     nodes = [n for n in level if not n.is_complete()]
     subgroups = [n for n in level if n.is_complete()]
-    inputs = [(rank, max_degree, relators, 'spin_short', node) for node in nodes]
+    inputs = [(rank, max_degree, relators, 'spin_short', node)
+                  for node in nodes]
     subgroups += sum(pool.map(subtree_list, inputs), [])
     for subgroup in subgroups:
         print(pickle.dumps(subgroup))

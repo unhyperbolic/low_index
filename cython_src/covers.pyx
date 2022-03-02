@@ -634,7 +634,7 @@ cdef class SimsTree:
         PyMem_Free(self.alt_to_std)
 
     def __init__(self, int rank=1, int max_degree=1, relators=[],
-                     strategy=None, root=None):
+                     strategy="spin_short", root=None):
         self.rank = rank
         self.max_degree = max_degree
         self.strategy = strategy
@@ -694,7 +694,10 @@ cdef class SimsTree:
                     result.append(r)
         return sorted(result, key=lambda x : len(x))
 
-    cpdef list(self):
+    def list(self, use_mp=True):
+        return self.list_mp() if use_mp else self.list_1p()
+    
+    cpdef list_1p(self):
         """
         Return a list created from this tree's iterator.  We call the C
         implementation of the iterator's next method directly.
@@ -709,7 +712,7 @@ cdef class SimsTree:
             result.append(node)
         return result
 
-    def list_mp(self, int depth=2):
+    cpdef list_mp(self, int depth=2):
         """
         Compute the list of covers with a pool of worker processes.
         """
