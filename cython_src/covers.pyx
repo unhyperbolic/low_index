@@ -441,8 +441,8 @@ cdef class SimsNode(CoveringSubgraph):
         edge which would result in a higher complexity. If no such edge is found
         for any choice of basepoint it returns True.
         """
-        cdef unsigned char *std_to_alt = tree.std_to_alt
-        cdef unsigned char *alt_to_std = tree.alt_to_std
+        cdef unsigned char std_to_alt[256]
+        cdef unsigned char alt_to_std[256]
         cdef int basepoint, max_index
         cdef int slot_vertex, slot_label
         cdef int degree = self.degree, rank = self.rank
@@ -620,18 +620,6 @@ cdef class SimsTree:
     cdef public str strategy
     cdef int num_relators
     cdef list cache
-    # Temporary workspace used by SimsNodes when checking minimality.
-    cdef unsigned char *std_to_alt
-    cdef unsigned char *alt_to_std
-
-    def __cinit__(self,  int rank=1, int max_degree=1, relators=[],
-                      strategy="spin_short", root=None):
-        self.std_to_alt = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
-        self.alt_to_std = <unsigned char*>PyMem_Malloc(self.max_degree + 1)
-
-    def __dealloc__(self):
-        PyMem_Free(self.std_to_alt)
-        PyMem_Free(self.alt_to_std)
 
     def __init__(self, int rank=1, int max_degree=1, relators=[],
                      strategy="spin_short", root=None):
@@ -681,7 +669,7 @@ cdef class SimsTree:
         return SimsNode(self.rank, self.max_degree, self.num_relators)
 
     cdef spin(self, str word):
-        return [word[k:] + word[:k] for k in range(len(word))]
+        return sorted(set(word[k:] + word[:k] for k in range(len(word))))
 
     def spin_short_relators(self, relators):
         result = []
