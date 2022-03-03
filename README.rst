@@ -1,13 +1,10 @@
-FPGroups
+LowIndex
 ========
 
-The FPGroups project aims to provide a Python module which implements
-standard algorithms related to finitely presented groups.  It will be
-included as a component of a future release of SnapPy.
-
-Currently the fpgroups module provides an implementation of a variant
-of Charles Sims' algorithm for enumerating low index subgroups of a
-finitely presented group up to conjugacy.
+The LowIndex project provides a Python module which implements a variant
+of Charles Sims' Low Index Subgroups algorithm for enumerating all of
+the conjugacy classes of subgroups with finite index less than a given
+bound.
 
 Here is a sample computation:
 
