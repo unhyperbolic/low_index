@@ -21,7 +21,8 @@ def main(rank, max_degree, bloom_size, relators):
                   for node in nodes]
     subgroups += sum(pool.map(subtree_list, inputs), [])
     for subgroup in subgroups:
-        print(subgroup)
+        sys.stdout.buffer.write(len(subgroup).to_bytes(4, 'little') + subgroup)
+        sys.stdout.flush()
 
 if __name__ == '__main__':
     rank, max_degree, bloom_size = (int(arg) for arg in sys.argv[1:4])

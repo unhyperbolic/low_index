@@ -43,6 +43,8 @@ Conventions:
   terminal vertex i and label j.
 """
 
+import subprocess
+
 cdef class CoveringSubgraph:
     cdef public int rank
     cdef public int degree
@@ -684,7 +686,7 @@ cdef class SimsTree:
 
     def list(self, use_mp=True):
         return self.list_mp() if use_mp else self.list_1p()
-    
+
     cpdef list_1p(self):
         """
         Return a list created from this tree's iterator.  We call the C
@@ -708,11 +710,14 @@ cdef class SimsTree:
         relator_strings = [str(r) for r in self.orig_relators]
         args = [sys.executable, multi.__file__, str(self.rank),
                 str(self.max_degree), str(target_size)] + relator_strings
-        output = run(args, capture_output=True, encoding='ascii')
-        for line in output.stdout.split('\n'):
-            if line:
-                p = eval(line)
-                result.append(pickle.loads(p))
+        with subprocess.Popen(args, stdout=subprocess.PIPE) as proc:
+            while proc:
+                n = proc.stdout.read(4)
+                if n:
+                    size = int.from_bytes(n, 'little')
+                    result.append(pickle.loads(proc.stdout.read(size)))
+                else:
+                    break
         return result
 
     # This method uses too much memory to be used in the list method, but is
