@@ -1,6 +1,6 @@
 import doctest
 import inspect
-import fpgroups
+import low_index
 import types
 from doctest import DocTestFinder, DocTestParser, DocTestRunner
 
@@ -39,4 +39,4 @@ def doctest_module(module, verbose=False):
     print(result)
 
 def runtests(verbose=False):
-    doctest_module(fpgroups, verbose=verbose)
+    doctest_module(low_index, verbose=verbose)

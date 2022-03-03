@@ -1,9 +1,9 @@
-import fpgroups, pickle, time, sys
+import low_index, pickle, time, sys
 import multiprocessing
 
 def subtree_list(data):
     rank, max_degree, rels, strategy, sims_node=data
-    subgroups = fpgroups.SimsTree(rank, max_degree, rels, strategy,
+    subgroups = low_index.SimsTree(rank, max_degree, rels, strategy,
                                   sims_node).list_1p()
     return [pickle.dumps(s) for s in subgroups]
 
@@ -13,7 +13,7 @@ def main(rank, max_degree, bloom_size, relators):
     else:
         context = multiprocessing.get_context('spawn')
     pool = context.Pool(multiprocessing.cpu_count())
-    tree = fpgroups.SimsTree(rank, max_degree, relators, 'spin_short')
+    tree = low_index.SimsTree(rank, max_degree, relators, 'spin_short')
     stems = tree.bloom(bloom_size)
     nodes = [n for n in stems if not n.is_complete()]
     subgroups = [pickle.dumps(n) for n in stems if n.is_complete()]

@@ -1,6 +1,6 @@
-from _fpgroups import *
+from _low_index import *
 __version__ = '1.0.0'
-from fpgroups import ReducedWord
+from low_index import ReducedWord
 
 def version():
     return __version__
@@ -9,7 +9,7 @@ class FreeGroup:
     """
     A free group of specified rank.
 
-    >>> from fpgroups import *
+    >>> from low_index import *
     >>> F4 = FreeGroup(rank=4)
     >>> w = F4('abcDDDdc')
     >>> w

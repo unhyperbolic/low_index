@@ -10,7 +10,7 @@ Here is a sample computation:
 
 .. code-block:: python
 
-    >>> from fpgroups import *
+    >>> from low_index import *
     >>>  # Conjugacy classes of subgroups of F_3 with index at most 4: 
     >>> sgps = SimsTree(rank=3, max_degree=4).list()
     >>> len(sgps)
