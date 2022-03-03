@@ -3,8 +3,8 @@ LowIndex
 
 The LowIndex project provides a Python module which implements a variant
 of Charles Sims' Low Index Subgroups algorithm for enumerating all of
-the conjugacy classes of subgroups with finite index less than a given
-bound.
+the conjugacy classes of subgroups of a finitely presented group with
+finite index less than a given bound.
 
 Here is a sample computation:
 
