@@ -714,7 +714,7 @@ cdef class SimsTree:
             while proc:
                 n = proc.stdout.read(4)
                 if n:
-                    size = int.from_bytes(n, 'little')
+                    size = int.from_bytes(n, 'big')
                     result.append(pickle.loads(proc.stdout.read(size)))
                 else:
                     break
