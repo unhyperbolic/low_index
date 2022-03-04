@@ -37,9 +37,9 @@ Conventions:
 
 - While constructing covers we need to work with subgraphs of the 1-skeletion.
   A subgraph can be represented by a DxG matrix in which some of the entries are
-  0.  The (i,j) entry of the matrix of outties is 0 if and only if there is no
+  0.  The (i,j) entry of the outgoing matrix is 0 if and only if there is no
   edge with initial vertex i and label j in the subgraph.  Similarly, the (i,j)
-  entry of the matrix of incoming is 0 if and only if there is no edge with
+  entry of the incoming matrix is 0 if and only if there is no edge with
   terminal vertex i and label j.
 """
 
