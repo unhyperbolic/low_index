@@ -528,6 +528,9 @@ cdef class NodeManager:
     cdef inline stack_is_empty(NodeManager self):
         return len(self.stack) == 0
 
+    cdef inline peek(NodeManager self):
+        return self.stack[-1]
+
     cdef push(NodeManager self, SimsNode node):
         cdef list sprouts = node.sprout(self)
         self.stack.append((node, sprouts))
@@ -563,13 +566,14 @@ cdef class SimsTreeIterator:
         return node
 
     cdef inline _next(self):
-        cdef list sprouts, stack = self.manager.stack
+        cdef list sprouts
+        cdef NodeManager manager = self.manager
         cdef SimsNode top, node
         while True:
             if self.manager.stack_is_empty():
                 return None
             # Peek at the top of the stack.
-            top, sprouts = stack[-1]
+            top, sprouts = self.manager.peek()
             # If the top graph is complete, pop it, cache it, and clone it.
             if top._is_complete():
                 node = self.manager.pop()
@@ -585,7 +589,7 @@ cdef class SimsTreeIterator:
                     if self.manager.stack_is_empty():
                         return None
                     # Take a peek to see if there are unvisited children.
-                    top, sprouts = stack[-1]
+                    top, sprouts = manager.peek()
                     if not sprouts:
                         self.manager.pop(recycle=1)
                     else:
