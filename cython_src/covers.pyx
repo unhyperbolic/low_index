@@ -301,7 +301,7 @@ cdef class SimsNode(CoveringSubgraph):
             size = 2*self.num_relators*self.max_degree
             memcpy(other.state_info, self.state_info, size)
 
-    cdef sprout(self, SimsTree tree):
+    cdef sprout(self, NodeManager manager):
         """
         Find the first empty edge slot in this based partial covering.  For each
         possible way to add an edge in that slot, create a new node containing
@@ -340,14 +340,14 @@ cdef class SimsNode(CoveringSubgraph):
                 if t == 0:
                     targets.append((l, v, n+1))
         for l, v, n in targets:
-            new_subgraph = tree.get_node()
+            new_subgraph = manager.get_node()
             self._copy_in_place(new_subgraph)
             new_subgraph.add_edge(l, v, n)
-            if (self.relators_may_lift(new_subgraph, tree.relators)
+            if (self.relators_may_lift(new_subgraph, manager.relators)
                 and new_subgraph.may_be_minimal()):
                 children.append(new_subgraph)
             else:
-                tree.cache.append(new_subgraph)
+                manager.recycle(new_subgraph)
         return children
 
     cdef relators_may_lift(self, SimsNode child, list relators):
@@ -503,66 +503,93 @@ cdef class SimsNode(CoveringSubgraph):
                     slot_vertex += 1
         return True
 
+cdef class NodeManager:
+    cdef SimsTree tree
+    cdef list stack, cache, relators
+    cdef int rank, max_degree, num_relators
+
+    def __init__(self, SimsTree tree):
+        self.rank = tree.rank
+        self.max_degree = tree.max_degree
+        self.num_relators = tree.num_relators
+        self.relators = tree.relators
+        self.cache = []
+        self.stack = []
+
+    cdef get_node(NodeManager self):
+        """
+        If possible, reuse cached SimsNodes to avoid needless construction
+        and destruction of nodes.
+        """
+        if self.cache:
+            return self.cache.pop()
+        return SimsNode(self.rank, self.max_degree, self.num_relators)
+
+    cdef inline stack_is_empty(NodeManager self):
+        return len(self.stack) == 0
+
+    cdef push(NodeManager self, SimsNode node):
+        cdef list sprouts = node.sprout(self)
+        self.stack.append((node, sprouts))
+
+    cdef pop(NodeManager self, int recycle=0):
+        cdef SimsNode top
+        cdef list sprouts
+        top, sprouts = self.stack.pop()
+        if recycle == 0:
+            return top
+        self.cache.append(top)
+
+    cdef recycle(NodeManager self, SimsNode node):
+        self.cache.append(node)
+
 cdef class SimsTreeIterator:
     cdef SimsTree tree
-    cdef list stack
     cdef int rank, max_degree, num_relators
+    cdef NodeManager manager
 
     def __init__(self, SimsTree tree):
         self.tree = tree
         self.rank = tree.rank
         self.max_degree = tree.max_degree
         self.num_relators = len(tree.relators)
-        self.stack = []
-        self.push(tree.root)
+        self.manager = NodeManager(tree)
+        self.manager.push(tree.root)
 
     def __next__(self):
         cdef node = self._next()
         if node is None:
-            self.tree.cache = []
             raise StopIteration
         return node
 
     cdef inline _next(self):
-        cdef list sprouts
+        cdef list sprouts, stack = self.manager.stack
         cdef SimsNode top, node
         while True:
-            if not self.stack:
+            if self.manager.stack_is_empty():
                 return None
             # Peek at the top of the stack.
-            top, sprouts = self.stack[-1]
+            top, sprouts = stack[-1]
             # If the top graph is complete, pop it, cache it, and clone it.
             if top._is_complete():
-                node = self.pop()
-                self.tree.cache.append(node)
+                node = self.manager.pop()
+                self.manager.recycle(node)
                 return node.clone()
             # If there are unvisited children, visit the next one.
             if sprouts:
-                self.push(sprouts.pop())
+                self.manager.push(sprouts.pop())
             # Otherwise, ascend to a node with unvisited children.  Be sure
             # to cache any nodes that get popped from our stack.
             else:
                 while True:
-                    if not self.stack:
+                    if self.manager.stack_is_empty():
                         return None
                     # Take a peek to see if there are unvisited children.
-                    top, sprouts = self.stack[-1]
+                    top, sprouts = stack[-1]
                     if not sprouts:
-                        self.pop(recycle=1)
+                        self.manager.pop(recycle=1)
                     else:
                         break
-
-    cdef push(SimsTreeIterator self, SimsNode node):
-        cdef list sprouts = node.sprout(self.tree)
-        self.stack.append((node, sprouts))
-
-    cdef pop(SimsTreeIterator self, int recycle=0):
-        cdef SimsNode top
-        cdef list sprouts
-        top, sprouts = self.stack.pop()
-        if recycle == 0:
-            return top
-        self.tree.cache.append(top)
 
 cdef class SimsTree:
     """
@@ -620,7 +647,6 @@ cdef class SimsTree:
     cdef public list orig_relators
     cdef public str strategy
     cdef int num_relators
-    cdef list cache
 
     def __init__(self, int rank=1, int max_degree=1, relators=[],
                      strategy="spin_short", root=None):
@@ -640,7 +666,6 @@ cdef class SimsTree:
             self.root = SimsNode(rank=rank, max_degree=max_degree,
                                  num_relators=self.num_relators)
         self.nodes = [self.root]
-        self.cache = []
 
     def __iter__(self):
         return SimsTreeIterator(self)
@@ -659,15 +684,6 @@ cdef class SimsTree:
         """
         cdef list relators = [str(r) for r in self.relators]
         return SimsTree(self.rank, self.max_degree, relators, root=node)
-
-    cdef get_node(SimsTree self):
-        """
-        If possible, reuse cached SimsNodes to avoid needless construction
-        and destruction of nodes.
-        """
-        if self.cache:
-            return self.cache.pop()
-        return SimsNode(self.rank, self.max_degree, self.num_relators)
 
     cdef spin(self, str word):
         return sorted(set(word[k:] + word[:k] for k in range(len(word))))
@@ -732,11 +748,12 @@ cdef class SimsTree:
         cdef int count = 0
         cdef list new_nodes
         cdef list sprouts
+        cdef NodeManager manager = NodeManager(self)
         while True:
             count = 0
             new_nodes = []
             for tip in self.nodes:
-                sprouts = tip.sprout(self)
+                sprouts = tip.sprout(manager)
                 count += len(sprouts)
                 if sprouts:
                     new_nodes += sprouts
