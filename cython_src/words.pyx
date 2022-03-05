@@ -6,26 +6,25 @@ alphabet = 'ZYXWVUTSRQPONMLKJIHGFEDCBA abcdefghijklnmopqrstuvwxyz'
 cdef class Word():
     cdef public int rank, length
     cdef int start, size
-    cdef char* buffer
+    cdef short* buffer
 
     def __cinit__(self, letters, int rank=0, int extra_space=0):
         self.rank = rank
         self.start = 1
         self.length = len(letters)
         self.size = self.length + 2 + extra_space
-        self.buffer = <char *>PyMem_Malloc(self.size)
+        self.buffer = <short *>PyMem_Malloc(self.size*sizeof(short))
 
     def __init__(self, letters, int rank=0, int extra_space=0):
         cdef int x  # GRRR C allows negative chars but Cython doesn't.
         if rank == 0:
             raise ValueError('The rank must be a positive integer')
         if isinstance(letters, str):
-            byteseq = [alphabet.index(l) - 26 for l in letters]
+            seq = [alphabet.index(l) - 26 for l in letters]
         else:
-            byteseq = bytes(letters)
-        for n in range(len(byteseq)):
-            x = byteseq[n]
-            x = x if x < 128 else x - 256  # GRRR No negative chars in Cython.
+            seq = letters
+        for n in range(len(seq)):
+            x = seq[n]
             if x == 0 or x > self.rank or x < -self.rank :
                 raise ValueError(
                     'Invalid letter {0}; must be non-zero and in [-{1},{1}]'.format(
@@ -41,8 +40,7 @@ cdef class Word():
 
     def __repr__(self):
         return 'Word(%s, rank=%d)'%(
-            [x if x < 128 else x - 256 for x in
-                 self.buffer[self.start:self.start + self.length]],
+            [x for x in self.buffer[self.start:self.start + self.length]],
             self.rank)
 
     def __str__(self):
@@ -70,9 +68,9 @@ cdef class Word():
         return answer
 
     cdef repack(self):
-        cdef char *old = self.buffer
+        cdef short *old = self.buffer
         self.size = self.length + 2
-        self.buffer = <char *>PyMem_Malloc(self.size)
+        self.buffer = <short *>PyMem_Malloc(self.size*sizeof(short))
         self.buffer[0] = 0
         for i in range(self.length):
             self.buffer[i] = old[self.start + i]
@@ -132,8 +130,8 @@ cdef class ReducedWord(Word):
         (length, lex) ordering, reallocating memory if necessary.
         [[This is harder that one would expect]].
         """
-        cdef char next
-        cdef char* buf = &self.buffer[self.start]
+        cdef short next
+        cdef short* buf = &self.buffer[self.start]
         cdef int len = self.length
         # Special case for the trivial word
         if len == 0:
@@ -186,7 +184,8 @@ cdef class ReducedWord(Word):
         if self.length == 0:
             return ReducedWord('', self.rank)
         return ReducedWord(
-            self.buffer[self.start:self.start + self.length], self.rank)
+            [x for x in self.buffer[self.start:self.start + self.length]],
+             self.rank)
 
     def __mul__(self, ReducedWord other):
         cdef int size = self.length + other.length
@@ -228,4 +227,3 @@ cdef class CyclicallyReducedWord(ReducedWord):
 
     def __mul__(self, other):
         raise ValueError('CyclicallyReducedWords do not form a semigroup.')
-

@@ -585,31 +585,31 @@ cdef class SimsTree:
     of edges in a cover of the maximal allowed degree.  Traversal of the tree in
     depth-first order only requires a stack of size equal to the maximum depth.
 
-    >>> from fpgroups import *
+    >>> from low_index import *
     >>> t = SimsTree(rank=1, max_degree=3).list()
     >>> len(t)
     3
     >>> for g in t: print(g)
     ...
-    Sims Node with edges:
+    SimsNode with edges:
     1--1->2
     2--1->3
     3--1->1
-    Sims Node with edges:
+    SimsNode with edges:
     1--1->2
     2--1->1
-    Sims Node with edges:
+    SimsNode with edges:
     1--1->1
     >>> t = SimsTree(rank=2, max_degree=3).list()
     >>> len(t)
     11
     >>> print(t[7])
-    Sims Node with edges:
+    SimsNode with edges:
     1--1->1
     1--2->2
-    2--1->2
+    2--1->3
     2--2->3
-    3--1->3
+    3--1->2
     3--2->1
     """
     cdef public int rank
