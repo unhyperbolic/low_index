@@ -261,7 +261,6 @@ cdef class SimsNode(CoveringSubgraph):
                 for n, c in enumerate(lift_vertices):
                     self.state_info[size + n] = c
 
-
     def __dealloc__(self):
         if self.num_relators:
             PyMem_Free(self.state_info)
@@ -344,14 +343,14 @@ cdef class SimsNode(CoveringSubgraph):
             new_subgraph = tree.get_node()
             self._copy_in_place(new_subgraph)
             new_subgraph.add_edge(l, v, n)
-            if (self.relators_may_lift(new_subgraph, tree)
-                and new_subgraph.may_be_minimal(tree)):
+            if (self.relators_may_lift(new_subgraph, tree.relators)
+                and new_subgraph.may_be_minimal()):
                 children.append(new_subgraph)
             else:
                 tree.cache.append(new_subgraph)
         return children
 
-    cdef relators_may_lift(self, SimsNode child, SimsTree tree):
+    cdef relators_may_lift(self, SimsNode child, list relators):
         """
         Check that when any relator is lifted to any vertex of a child graph it
         either lifts to a loop or runs into a missing edge. This subgraph uses
@@ -362,7 +361,7 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char index, vertex, save, length
         cdef int n = 0, v, i = 0, j
         cdef int rank = child.rank, max_degree = child.max_degree
-        for w in tree.relators:
+        for w in relators:
             length = w.length
             for v in range(child.degree):
                 # Check whether relator n lifts to a loop at vertex v + 1.
@@ -400,7 +399,7 @@ cdef class SimsNode(CoveringSubgraph):
             n += 1
         return True
 
-    cdef may_be_minimal(self, SimsTree tree):
+    cdef may_be_minimal(self):
         """
         Return False if the subgraph can provably not be extended to a cover
         which is minimal in its conjugacy class, True otherwise.
