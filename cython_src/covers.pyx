@@ -535,27 +535,24 @@ cdef class NodeManager:
         cdef list sprouts = node.sprout(self)
         self.stack.append((node, sprouts))
 
-    cdef pop(NodeManager self, int recycle=0):
+    cdef pop(NodeManager self):
         cdef SimsNode top
         cdef list sprouts
         top, sprouts = self.stack.pop()
-        if recycle == 0:
-            return top
         self.cache.append(top)
+        return top
 
     cdef recycle(NodeManager self, SimsNode node):
         self.cache.append(node)
 
 cdef class SimsTreeIterator:
-    cdef SimsTree tree
     cdef int rank, max_degree, num_relators
     cdef NodeManager manager
 
     def __init__(self, SimsTree tree):
-        self.tree = tree
         self.rank = tree.rank
         self.max_degree = tree.max_degree
-        self.num_relators = len(tree.relators)
+        self.num_relators = tree.num_relators
         self.manager = NodeManager(tree)
         self.manager.push(tree.root)
 
@@ -577,7 +574,6 @@ cdef class SimsTreeIterator:
             # If the top graph is complete, pop it, cache it, and clone it.
             if top._is_complete():
                 node = self.manager.pop()
-                self.manager.recycle(node)
                 return node.clone()
             # If there are unvisited children, visit the next one.
             if sprouts:
@@ -591,7 +587,7 @@ cdef class SimsTreeIterator:
                     # Take a peek to see if there are unvisited children.
                     top, sprouts = manager.peek()
                     if not sprouts:
-                        self.manager.pop(recycle=1)
+                        self.manager.pop()
                     else:
                         break
 
