@@ -316,6 +316,7 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char *incoming = self.incoming
         cdef unsigned char *outgoing = self.outgoing
         cdef SimsNode new_subgraph
+        cdef list relators = manager.tree.relators
         self.sprouts = []
         slot = self._first_empty_slot()
         if slot == 0:
@@ -345,7 +346,7 @@ cdef class SimsNode(CoveringSubgraph):
             new_subgraph = manager.get_node()
             self._copy_in_place(new_subgraph)
             new_subgraph.add_edge(l, v, n)
-            if (self.relators_may_lift(new_subgraph, manager.relators)
+            if (self.relators_may_lift(new_subgraph, relators)
                 and new_subgraph.may_be_minimal()):
                 self.sprouts.append(new_subgraph)
             else:
@@ -506,14 +507,14 @@ cdef class SimsNode(CoveringSubgraph):
 
 cdef class NodeManager:
     cdef SimsTree tree
-    cdef list stack, cache, relators
+    cdef list stack, cache
     cdef int rank, max_degree, num_relators
 
     def __init__(self, SimsTree tree):
+        self.tree = tree
         self.rank = tree.rank
         self.max_degree = tree.max_degree
         self.num_relators = tree.num_relators
-        self.relators = tree.relators
         self.cache = []
         self.stack = []
 
@@ -537,7 +538,10 @@ cdef class NodeManager:
         self.stack.append(node)
 
     cdef pop(NodeManager self):
-        return self.stack.pop()
+        cdef SimsNode node = self.stack.pop()
+        node.sprouts = []
+        self.cache.append(node)
+        return node
 
     cdef recycle(NodeManager self, SimsNode node):
         node.sprouts = []
@@ -572,14 +576,13 @@ cdef class SimsTreeIterator:
             # If the top graph is complete, pop it, cache it, and clone it.
             if top._is_complete():
                 node = self.manager.pop()
-                self.manager.recycle(node)
                 return node.clone()
             # If there are unvisited children, visit the next one.
             sprouts = top.sprouts
             if len(sprouts) > 0:
                 self.manager.push(sprouts.pop())
-            # Otherwise, ascend to a node with unvisited children.  Be sure
-            # to cache any nodes that get popped from our stack.
+            # Otherwise, ascend to a node with unvisited children.
+            # The popped nodes will be recycled.
             else:
                 while True:
                     if self.manager.stack_is_empty():
