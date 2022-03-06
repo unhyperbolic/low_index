@@ -117,7 +117,7 @@ cdef class CoveringSubgraph:
     def __hash__(self):
         return hash(self.__key__())
 
-    def __eq__(SimsNode self, SimsNode other):
+    def __eq__(CoveringSubgraph self, CoveringSubgraph other):
         if self.rank != other.rank:
             return False
         if self.degree != other.degree:
