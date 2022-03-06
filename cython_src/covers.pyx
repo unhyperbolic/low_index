@@ -240,11 +240,13 @@ cdef class SimsNode(CoveringSubgraph):
     cdef unsigned char* state_info
     cdef unsigned char* lift_indices
     cdef unsigned char* lift_vertices
+    cdef list sprouts
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0,
                   bytes outgoing=b'', bytes incoming=b'',
                   bytes lift_indices=b'', bytes lift_vertices=b''):
         cdef int n
+        self.sprouts = []
         if num_relators > 0:
             # Maintain per-vertex state for each relator and its inverse.
             size = num_relators*max_degree
@@ -289,8 +291,8 @@ cdef class SimsNode(CoveringSubgraph):
         return result
 
     cdef _copy_in_place(SimsNode self, SimsNode other):
-        # These must have the same rank, max_degree, and num_relators
-        # We do not check!
+        # These must have the same rank, max_degree, and num_relators.
+        # We do not check!  The sprouts are not copied.
         cdef int size = self.rank*self.max_degree
         other.degree = self.degree
         other.num_edges = self.num_edges
@@ -314,10 +316,10 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char *incoming = self.incoming
         cdef unsigned char *outgoing = self.outgoing
         cdef SimsNode new_subgraph
-        cdef list children = []
+        self.sprouts = []
         slot = self._first_empty_slot()
         if slot == 0:
-            return children
+            return
         v = slot & 0xff
         l = slot >> 8
         targets = []
@@ -345,10 +347,9 @@ cdef class SimsNode(CoveringSubgraph):
             new_subgraph.add_edge(l, v, n)
             if (self.relators_may_lift(new_subgraph, manager.relators)
                 and new_subgraph.may_be_minimal()):
-                children.append(new_subgraph)
+                self.sprouts.append(new_subgraph)
             else:
                 manager.recycle(new_subgraph)
-        return children
 
     cdef relators_may_lift(self, SimsNode child, list relators):
         """
@@ -532,17 +533,14 @@ cdef class NodeManager:
         return self.stack[-1]
 
     cdef push(NodeManager self, SimsNode node):
-        cdef list sprouts = node.sprout(self)
-        self.stack.append((node, sprouts))
+        node.sprout(self)
+        self.stack.append(node)
 
     cdef pop(NodeManager self):
-        cdef SimsNode top
-        cdef list sprouts
-        top, sprouts = self.stack.pop()
-        self.cache.append(top)
-        return top
+        return self.stack.pop()
 
     cdef recycle(NodeManager self, SimsNode node):
+        node.sprouts = []
         self.cache.append(node)
 
 cdef class SimsTreeIterator:
@@ -570,13 +568,15 @@ cdef class SimsTreeIterator:
             if self.manager.stack_is_empty():
                 return None
             # Peek at the top of the stack.
-            top, sprouts = self.manager.peek()
+            top = self.manager.peek()
             # If the top graph is complete, pop it, cache it, and clone it.
             if top._is_complete():
                 node = self.manager.pop()
+                self.manager.recycle(node)
                 return node.clone()
             # If there are unvisited children, visit the next one.
-            if sprouts:
+            sprouts = top.sprouts
+            if len(sprouts) > 0:
                 self.manager.push(sprouts.pop())
             # Otherwise, ascend to a node with unvisited children.  Be sure
             # to cache any nodes that get popped from our stack.
@@ -585,8 +585,8 @@ cdef class SimsTreeIterator:
                     if self.manager.stack_is_empty():
                         return None
                     # Take a peek to see if there are unvisited children.
-                    top, sprouts = manager.peek()
-                    if not sprouts:
+                    top = manager.peek()
+                    if len(top.sprouts) == 0:
                         self.manager.pop()
                     else:
                         break
@@ -753,7 +753,8 @@ cdef class SimsTree:
             count = 0
             new_nodes = []
             for tip in self.nodes:
-                sprouts = tip.sprout(manager)
+                tip.sprout(manager)
+                sprouts = tip.sprouts
                 count += len(sprouts)
                 if sprouts:
                     new_nodes += sprouts
