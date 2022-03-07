@@ -352,6 +352,16 @@ cdef class SimsNode(CoveringSubgraph):
             else:
                 manager.recycle(new_subgraph)
 
+    cpdef relators_lift(self, relators):
+        cdef CyclicallyReducedWord w
+        cdef int v, end, length
+        for w in relators:
+            for v in range(self.degree):
+                end, length = self.lift(w, v + 1)
+                if end != v + 1 or length < w.length:
+                    return False
+        return True
+
     cdef relators_may_lift(self, SimsNode child, list relators):
         """
         Check that when any relator is lifted to any vertex of a child graph it
