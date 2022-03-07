@@ -657,16 +657,23 @@ cdef class SimsTree:
     cdef public SimsNode root
     cdef public list nodes
     cdef public list relators
-    cdef public list orig_relators
+    cdef public list relator_strings
+    cdef public list long_relators
     cdef public str strategy
     cdef int num_relators
+    cdef int num_long_relators
 
     def __init__(self, int rank=1, int max_degree=1, relators=[],
-                     strategy="spin_short", root=None):
+                     strategy="spin_short", root=None, int num_long_relators=0):
         self.rank = rank
         self.max_degree = max_degree
         self.strategy = strategy
-        self.orig_relators = [r for r in relators]
+        self.num_long_relators = num_long_relators
+        if num_long_relators:
+            self.long_relators = [CyclicallyReducedWord(r, self.rank)
+                                    for r in relators[-num_long_relators:]]
+            relators = relators[:-num_long_relators]
+        self.relator_strings = [r for r in relators]
         if strategy == 'spin_short':
             relators = self.spin_short_relators(relators)
         self.relators = [CyclicallyReducedWord(r, self.rank) for r in relators]
@@ -713,7 +720,10 @@ cdef class SimsTree:
         return sorted(result, key=lambda x : len(x))
 
     def list(self, use_mp=True):
-        return self.list_mp() if use_mp else self.list_1p()
+        nodes = self.list_mp() if use_mp else self.list_1p()
+        if self.num_long_relators:
+            return [N for N in nodes if N.relators_lift(self.long_relators)]
+        return nodes
 
     cpdef list_1p(self):
         """
@@ -735,7 +745,7 @@ cdef class SimsTree:
         Compute the list of covers with a pool of worker processes.
         """
         result = []
-        relator_strings = [str(r) for r in self.orig_relators]
+        relator_strings = [str(r) for r in self.relator_strings]
         args = [sys.executable, multi.__file__, str(self.rank),
                 str(self.max_degree), str(target_size)] + relator_strings
         with subprocess.Popen(args, stdout=subprocess.PIPE) as proc:
