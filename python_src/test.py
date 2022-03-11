@@ -40,3 +40,6 @@ def doctest_module(module, verbose=False):
 
 def runtests(verbose=False):
     doctest_module(low_index, verbose=verbose)
+
+if __name__ == '__main__':
+    runtests()
