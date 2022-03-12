@@ -16,4 +16,6 @@ low_index = Extension(
     extra_compile_args = extra_compile_args
 )
 
-setup(ext_modules = [low_index])
+setup(ext_modules = [low_index],
+    long_description=open('README.rst').read(),
+    long_description_content_type='text/x-rst')
