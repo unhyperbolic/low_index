@@ -1,6 +1,5 @@
-from _low_index import *
+from ._low_index import *
 __version__ = '1.0.0'
-from low_index import ReducedWord
 
 def version():
     return __version__
