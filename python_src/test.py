@@ -39,7 +39,7 @@ def doctest_module(module, verbose=False):
 def runtests(verbose=False):
     success = True
     for module in modules:
-        result = doctest_module(low_index, verbose=verbose)
+        result = doctest_module(module, verbose=verbose)
         if result.failed > 0:
             success = False
         print(module.__name__ + ':', result)
