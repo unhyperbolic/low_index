@@ -725,11 +725,14 @@ cdef class SimsTree:
             return [N for N in nodes if N.relators_lift(self.long_relators)]
         return nodes
 
-    cpdef list_1p(self):
+    cdef list_1p(self):
+
         """
-        Return a list created from this tree's iterator.  We call the C
-        implementation of the iterator's next method directly.
-        """
+        Return a list created from this tree's iterator.  We call the
+        C implementation of the iterator's next method directly. Does
+        not check long relators.
+	"""
+	
         cdef list result = []
         cdef SimsTreeIterator iterator = SimsTreeIterator(self)
         cdef SimsNode node
@@ -740,9 +743,10 @@ cdef class SimsTree:
             result.append(node)
         return result
 
-    cpdef list_mp(self, int target_size=1000):
+    cdef list_mp(self, int target_size=1000):
         """
-        Compute the list of covers with a pool of worker processes.
+        Compute the list of covers with a pool of worker processes. Does
+        not check long relators.
         """
         result = []
         relator_strings = [str(r) for r in self.relator_strings]
