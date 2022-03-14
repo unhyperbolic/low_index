@@ -4,7 +4,7 @@ import multiprocessing
 def subtree_list(data):
     rank, max_degree, rels, strategy, sims_node=data
     subgroups = low_index.SimsTree(rank, max_degree, rels, strategy,
-                                  sims_node).list_1p()
+                                  sims_node).list(use_mp=False)
     return [pickle.dumps(s) for s in subgroups]
 
 def main(rank, max_degree, bloom_size, relators):
