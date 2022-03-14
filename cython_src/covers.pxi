@@ -317,6 +317,7 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char *outgoing = self.outgoing
         cdef SimsNode new_subgraph
         cdef list relators = manager.tree.relators
+        cdef int num_spun = manager.tree.num_spun_relators
         self.sprouts = []
         slot = self._first_empty_slot()
         if slot == 0:
@@ -346,7 +347,7 @@ cdef class SimsNode(CoveringSubgraph):
             new_subgraph = manager.get_node()
             self._copy_in_place(new_subgraph)
             new_subgraph.add_edge(l, v, n)
-            if (self.relators_may_lift(new_subgraph, relators)
+            if (self.relators_may_lift(new_subgraph, relators, num_spun)
                 and new_subgraph.may_be_minimal()):
                 self.sprouts.append(new_subgraph)
             else:
@@ -362,7 +363,7 @@ cdef class SimsNode(CoveringSubgraph):
                     return False
         return True
 
-    cdef relators_may_lift(self, SimsNode child, list relators):
+    cdef relators_may_lift(self, SimsNode child, list relators, int num_spun):
         """
         Check that when any relator is lifted to any vertex of a child graph it
         either lifts to a loop or runs into a missing edge. This subgraph uses
@@ -371,12 +372,13 @@ cdef class SimsNode(CoveringSubgraph):
         cdef CyclicallyReducedWord w
         cdef char l
         cdef unsigned char index, vertex, save, length
-        cdef int n = 0, v, i = 0, j
+        cdef int n, v, i = 0, j
         cdef int rank = child.rank, max_degree = child.max_degree
-        for w in relators:
-            length = w.length
-            for v in range(child.degree):
-                # Check whether relator n lifts to a loop at vertex v + 1.
+        for v in range(child.degree):
+            n = 0
+            # Check whether relator n lifts to a loop at vertex v + 1.
+            for w in relators:
+                length = w.length
                 j = n*max_degree + v
                 index = self.lift_indices[j]
                 if index >= length:
@@ -396,19 +398,20 @@ cdef class SimsNode(CoveringSubgraph):
                     if vertex == 0:
                         break
                 if vertex == 0:
-                    # We hit a missing edge - save the state and go on.
+                    # We hit a missing edge or failed the minimality test.
+                    # save the state and go on.
                     child.lift_vertices[j] = save
                     child.lift_indices[j] = i
                 elif i == length - 1:
                     # The entire relator lifted.  Is it a loop?
                     if vertex == v + 1:
-                        # Yes.  Record that it lifts to a loop.
+                        # Yes. Record that it lifts to a loop.
                         child.lift_vertices[j] = vertex
                         child.lift_indices[j] = length
                     else:
                         # No.  Discard this child.
                         return False
-            n += 1
+                n += 1
         return True
 
     cdef may_be_minimal(self):
@@ -654,24 +657,27 @@ cdef class SimsTree:
     """
     cdef public int rank
     cdef public int max_degree
+    cdef public int num_relators
+    cdef public int num_spun_relators
+    cdef public int num_long_relators
     cdef public SimsNode root
     cdef public list nodes
     cdef public list relators
     cdef public list relator_strings
     cdef public list long_relators
     cdef public str strategy
-    cdef int num_relators
-    cdef int num_long_relators
 
     def __init__(self, int rank=1, int max_degree=1, relators=[],
                      strategy="spin_short", root=None, int num_long_relators=0):
         self.rank = rank
         self.max_degree = max_degree
         self.strategy = strategy
+        relators.sort(key = len)
         self.num_long_relators = num_long_relators
         if num_long_relators:
             self.long_relators = [CyclicallyReducedWord(r, self.rank)
                                     for r in relators[-num_long_relators:]]
+            self.num_long_relators = num_long_relators
             relators = relators[:-num_long_relators]
         self.relator_strings = [r for r in relators]
         if strategy == 'spin_short':
@@ -708,13 +714,17 @@ cdef class SimsTree:
     cdef spin(self, str word):
         return sorted(set(word[k:] + word[:k] for k in range(len(word))))
 
-    def spin_short_relators(self, relators):
-        result = []
+    def spin_short_relators(SimsTree self, relators):
+        cdef result = []
+        cdef list spun
+        self.num_spun_relators = 0
         if relators:
             avg = sum(len(r) for r in relators) / len(relators)
-            for r in relators:
+            for r in sorted(relators, key=len):
                 if len(r) <= avg:
-                    result += self.spin(r)
+                    spun = self.spin(r)
+                    result += spun
+                    self.num_spun_relators += len(spun)
                 else:
                     result.append(r)
         return sorted(result, key=lambda x : len(x))
@@ -731,7 +741,7 @@ cdef class SimsTree:
         Return a list created from this tree's iterator.  We call the
         C implementation of the iterator's next method directly. Does
         not check long relators.
-	"""
+        """
 	
         cdef list result = []
         cdef SimsTreeIterator iterator = SimsTreeIterator(self)
