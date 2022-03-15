@@ -398,7 +398,7 @@ cdef class SimsNode(CoveringSubgraph):
                     if vertex == 0:
                         break
                 if vertex == 0:
-                    # We hit a missing edge - save the state and go on.
+                    # The lift hit a missing edge - save the state and go on.
                     child.lift_vertices[j] = save
                     child.lift_indices[j] = i
                 elif i == length - 1:
@@ -652,6 +652,12 @@ cdef class SimsTree:
     2--2->3
     3--1->2
     3--2->1
+    >>> S7_relators = ['aaaaaaa', 'bb', 'abababababab', 'AbabAbabAbab',\
+                       'AAbaabAAbaab', 'AAAbaaabAAAbaaab']
+    >>> len(SimsTree(2, 20, S7_relators).list())
+    4
+    >>> len(SimsTree(2, 20, S7_relators, num_long_relators=1).list())
+    4
     """
     cdef public int rank
     cdef public int max_degree
