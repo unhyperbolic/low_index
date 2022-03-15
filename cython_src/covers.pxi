@@ -373,19 +373,21 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char index, vertex, save, length
         cdef int n = 0, v, i = 0, j
         cdef int rank = child.rank, max_degree = child.max_degree
-        for w in relators:
-            length = w.length
-            for v in range(child.degree):
+        for v in range(child.degree):
+            n = 0
+            for w in relators:
+                length = w.length
                 # Check whether relator n lifts to a loop at vertex v + 1.
                 j = n*max_degree + v
-                index = self.lift_indices[j]
-                if index >= length:
-                    # We already checked that the relator lifts to a loop.
-                    continue
+                n += 1
                 vertex = self.lift_vertices[j]
+                if vertex == 255:
+                    # We have already verified that it lifts to a loop.
+                    continue
                 if vertex == 0:
                     # The state is uninitialized.
                     vertex = v + 1
+                index = self.lift_indices[j]
                 for i in range(index, length):
                     l = w.buffer[w.start + i]
                     save = vertex
@@ -403,12 +405,11 @@ cdef class SimsNode(CoveringSubgraph):
                     # The entire relator lifted.  Is it a loop?
                     if vertex == v + 1:
                         # Yes.  Record that it lifts to a loop.
-                        child.lift_vertices[j] = vertex
+                        child.lift_vertices[j] = 255
                         child.lift_indices[j] = length
                     else:
                         # No.  Discard this child.
                         return False
-            n += 1
         return True
 
     cdef may_be_minimal(self):
