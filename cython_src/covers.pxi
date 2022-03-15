@@ -713,7 +713,7 @@ cdef class SimsTree:
         return SimsTree(self.rank, self.max_degree, relators, root=node)
 
     cdef spin(self, str word):
-        return sorted(set(word[k:] + word[:k] for k in range(len(word))))
+        return list(set(word[k:] + word[:k] for k in range(len(word))))
 
     def spin_short_relators(self, relators):
         result = []
