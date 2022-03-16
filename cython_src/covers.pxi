@@ -373,21 +373,19 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char index, vertex, save, length
         cdef int n = 0, v, i = 0, j
         cdef int rank = child.rank, max_degree = child.max_degree
-        for v in range(child.degree):
-            n = 0
-            for w in relators:
-                length = w.length
+        for w in relators:
+            length = w.length
+            for v in range(child.degree):
                 # Check whether relator n lifts to a loop at vertex v + 1.
                 j = n*max_degree + v
-                n += 1
-                vertex = self.lift_vertices[j]
-                if vertex == 255:
-                    # We have already verified that it lifts to a loop.
+                index = self.lift_indices[j]
+                if index >= length:
+                    # We already checked that the relator lifts to a loop.
                     continue
+                vertex = self.lift_vertices[j]
                 if vertex == 0:
                     # The state is uninitialized.
                     vertex = v + 1
-                index = self.lift_indices[j]
                 for i in range(index, length):
                     l = w.buffer[w.start + i]
                     save = vertex
@@ -398,18 +396,19 @@ cdef class SimsNode(CoveringSubgraph):
                     if vertex == 0:
                         break
                 if vertex == 0:
-                    # The lift hit a missing edge - save the state and go on.
+                    # We hit a missing edge - save the state and go on.
                     child.lift_vertices[j] = save
                     child.lift_indices[j] = i
                 elif i == length - 1:
                     # The entire relator lifted.  Is it a loop?
                     if vertex == v + 1:
                         # Yes.  Record that it lifts to a loop.
-                        child.lift_vertices[j] = 255
+                        child.lift_vertices[j] = vertex
                         child.lift_indices[j] = length
                     else:
                         # No.  Discard this child.
                         return False
+            n += 1
         return True
 
     cdef may_be_minimal(self):
@@ -713,7 +712,7 @@ cdef class SimsTree:
         return SimsTree(self.rank, self.max_degree, relators, root=node)
 
     cdef spin(self, str word):
-        return list(set(word[k:] + word[:k] for k in range(len(word))))
+        return sorted(set(word[k:] + word[:k] for k in range(len(word))))
 
     def spin_short_relators(self, relators):
         result = []
