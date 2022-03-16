@@ -713,7 +713,7 @@ cdef class SimsTree:
         if relators:
             avg = sum(len(r) for r in relators) / len(relators)
             for r in relators:
-                if len(r) <= avg:
+                if len(r) <= max(avg, self.max_degree):
                     result += self.spin(r)
                 else:
                     result.append(r)
