@@ -369,7 +369,7 @@ cdef class SimsNode(CoveringSubgraph):
         its saved state as the starting point for checking the child.
         """
         cdef CyclicallyReducedWord w
-        cdef char l
+        cdef char label
         cdef unsigned char index, vertex, save, length
         cdef int n = 0, v, i = 0, j
         cdef int rank = child.rank, max_degree = child.max_degree
@@ -387,22 +387,25 @@ cdef class SimsNode(CoveringSubgraph):
                     # The state is uninitialized.
                     vertex = v + 1
                 for i in range(index, length):
-                    l = w.buffer[w.start + i]
+                    label = w.buffer[w.start + i]
                     save = vertex
-                    if l > 0:
-                        vertex = child.outgoing[rank*(vertex - 1) + l - 1]
+                    if label > 0:
+                        vertex = child.outgoing[rank*(vertex - 1) + label - 1]
                     else:
-                        vertex = child.incoming[rank*(vertex - 1) - l - 1]
+                        vertex = child.incoming[rank*(vertex - 1) - label - 1]
                     if vertex == 0:
+                        # We hit a missing edge - save the state and go on.
+                        child.lift_vertices[j] = save
+                        child.lift_indices[j] = i
                         break
-                if vertex == 0:
-                    # We hit a missing edge - save the state and go on.
-                    child.lift_vertices[j] = save
-                    child.lift_indices[j] = i
-                elif i == length - 1:
-                    # The entire relator lifted.  Is it a loop?
+                if i == length - 1:
+                    # The relator lifts, except the last edge may be missing.
+                    if vertex == 0:
+                        # The last edge is missing - add it now.
+                        child.add_edge(label, save, v+1)
+                        vertex = v + 1
                     if vertex == v + 1:
-                        # Yes.  Record that it lifts to a loop.
+                        # The relator lifts.  Record that information.
                         child.lift_vertices[j] = vertex
                         child.lift_indices[j] = length
                     else:
