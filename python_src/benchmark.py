@@ -80,7 +80,7 @@ def cpu_info():
     return 'Unknown CPU' 
 
 def run(ex):
-    print('%s: index = %d:'%(ex['group'], ex['index']))
+    print('%s; index = %d.'%(ex['group'], ex['index']))
     t = SimsTree(ex['rank'], ex['index'], ex['relators'], num_long_relators=ex['num_long'])
     start = time.time()
     x = t.list()
