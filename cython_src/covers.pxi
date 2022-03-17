@@ -678,6 +678,7 @@ cdef class SimsTree:
         self.max_degree = max_degree
         self.strategy = strategy
         self.num_long_relators = num_long_relators
+        relators.sort(key=len)
         if num_long_relators:
             self.long_relators = [CyclicallyReducedWord(r, self.rank)
                                     for r in relators[-num_long_relators:]]
@@ -726,7 +727,7 @@ cdef class SimsTree:
                     result += self.spin(r)
                 else:
                     result.append(r)
-        return sorted(result, key=lambda x : len(x))
+        return sorted(result, key=len)
 
     def list(self, use_mp=True):
         nodes = self.list_mp() if use_mp else self.list_1p()
