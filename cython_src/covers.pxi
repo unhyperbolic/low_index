@@ -200,7 +200,7 @@ cdef class CoveringSubgraph:
             length += 1
         return saved, length
 
-    cdef first_empty_slot(self):
+    cpdef first_empty_slot(self):
         cdef int v, l
         cdef div_t qr
         cdef unsigned char *incoming = self.incoming
@@ -240,13 +240,13 @@ cdef class SimsNode(CoveringSubgraph):
     cdef unsigned char* state_info
     cdef unsigned char* lift_indices
     cdef unsigned char* lift_vertices
-    cdef list sprouts
+    cdef list children
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0,
                   bytes outgoing=b'', bytes incoming=b'',
                   bytes lift_indices=b'', bytes lift_vertices=b''):
         cdef int n
-        self.sprouts = []
+        self.children = []
         if num_relators > 0:
             # Maintain per-vertex state for each relator and its inverse.
             size = num_relators*max_degree
@@ -292,7 +292,7 @@ cdef class SimsNode(CoveringSubgraph):
 
     cdef _copy_in_place(SimsNode self, SimsNode other):
         # These must have the same rank, max_degree, and num_relators.
-        # We do not check!  The sprouts are not copied.
+        # We do not check!  The children are not copied.
         cdef int size = self.rank*self.max_degree
         other.degree = self.degree
         other.num_edges = self.num_edges
@@ -317,7 +317,7 @@ cdef class SimsNode(CoveringSubgraph):
         cdef unsigned char *outgoing = self.outgoing
         cdef SimsNode new_subgraph
         cdef list relators = manager.tree.relators
-        self.sprouts = []
+        self.children = []
         slot = self._first_empty_slot()
         if slot == 0:
             return
@@ -348,7 +348,7 @@ cdef class SimsNode(CoveringSubgraph):
             new_subgraph.add_edge(l, v, n)
             if (self.relators_may_lift(new_subgraph, relators)
                 and new_subgraph.may_be_minimal()):
-                self.sprouts.append(new_subgraph)
+                self.children.append(new_subgraph)
             else:
                 manager.recycle(new_subgraph)
 
@@ -552,12 +552,12 @@ cdef class NodeManager:
 
     cdef pop(NodeManager self):
         cdef SimsNode node = self.stack.pop()
-        node.sprouts = []
+        node.children = []
         self.cache.append(node)
         return node
 
     cdef recycle(NodeManager self, SimsNode node):
-        node.sprouts = []
+        node.children = []
         self.cache.append(node)
 
 cdef class SimsTreeIterator:
@@ -591,7 +591,7 @@ cdef class SimsTreeIterator:
                 node = self.manager.pop()
                 return node.clone()
             # If there are unvisited children, visit the next one.
-            sprouts = top.sprouts
+            sprouts = top.children
             if len(sprouts) > 0:
                 self.manager.push(sprouts.pop())
             # Otherwise, ascend to a node with unvisited children.
@@ -602,7 +602,7 @@ cdef class SimsTreeIterator:
                         return None
                     # Take a peek to see if there are unvisited children.
                     top = manager.peek()
-                    if len(top.sprouts) == 0:
+                    if len(top.children) == 0:
                         self.manager.pop()
                     else:
                         break
@@ -791,7 +791,7 @@ cdef class SimsTree:
             new_nodes = []
             for tip in self.nodes:
                 tip.sprout(manager)
-                sprouts = tip.sprouts
+                sprouts = tip.children
                 count += len(sprouts)
                 if sprouts:
                     new_nodes += sprouts
