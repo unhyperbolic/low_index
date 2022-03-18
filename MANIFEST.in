@@ -1,0 +1,3 @@
+include cython_src/*.pxi
+include cython_src/*.pyx
+include cython_src/*.c
