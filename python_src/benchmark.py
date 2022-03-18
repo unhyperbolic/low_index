@@ -1,4 +1,5 @@
 import os
+import sys
 import platform
 import time
 from low_index import *
@@ -91,6 +92,7 @@ def run(ex):
     elapsed = time.time() - start
     print('%d subgroups'%len(x))
     print('%.3fs'%elapsed)
+    sys.stdout.flush()
 
 if __name__ == '__main__':
     print(cpu_info(), 'with', os.cpu_count(), 'cores')

@@ -3,7 +3,7 @@ try:
 except:
     # The import can fail when loaded by setup.py
     pass
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
 def version():
     return __version__
