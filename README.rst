@@ -16,16 +16,16 @@ Here is a sample computation:
     >>> len(sgps)
     653
     >>> from snappy import *
-    >>> G = Manifold('K11n34').fundamental_group()
-    >>> G
+    >>> G = Manifold('K11n34').fundamental_group(); G
     Generators:
        a,b,c
     Relators:
        aaBcbbcAc
        aacAbCBBaCAAbbcBc
     >>> # Degree at most 7 covers of the exterior of the Conway knot:
-    >>> sgps = SimsTree(rank=G.num_generators(), max_degree=7, relators=G.relators()).list()
-    >>> len(sgps) 
+    >>> t = SimsTree(G.num_generators(), 7, G.relators(), num_long_relators=1)
+    >>> sgrps = t.list()
+    >>> len(sgps)
     52
     >>> sgps[25].permutation_rep()
     [[1, 0, 3, 5, 2, 4], [0, 2, 4, 1, 5, 3], [2, 3, 4, 0, 1, 5]]
