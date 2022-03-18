@@ -1,4 +1,8 @@
-from ._low_index import *
+try:
+    from ._low_index import *
+except:
+    # The import can fail when loaded by setup.py
+    pass
 __version__ = '1.0.0'
 
 def version():
