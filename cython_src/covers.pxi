@@ -168,6 +168,21 @@ cdef class CoveringSubgraph:
         self.incoming[in_index] = from_vertex
         self.num_edges += 1
 
+    cdef remove_edge(self, int letter, int from_vertex, int to_vertex):
+        """
+        Add an edge.
+        """
+        cdef int out_index, in_index, label = letter
+        if letter < 0:
+            label, from_vertex, to_vertex = -letter, to_vertex, from_vertex
+        if from_vertex > self.degree or to_vertex > self.degree:
+            self.degree += 1
+        out_index = (from_vertex - 1)*self.rank + label - 1
+        in_index = (to_vertex - 1)*self.rank + label - 1
+        self.outgoing[out_index] = 0
+        self.incoming[in_index] = 0
+        self.num_edges -= 1
+
     cdef act_by(self, int letter, int vertex):
         if letter > 0:
             return self.outgoing[(vertex - 1)*self.rank + letter - 1]
@@ -378,14 +393,14 @@ cdef class SimsNode(CoveringSubgraph):
             for v in range(child.degree):
                 # Check whether relator n lifts to a loop at vertex v + 1.
                 j = n*max_degree + v
-                index = self.lift_indices[j]
-                if index >= length:
+                vertex = self.lift_vertices[j]
+                if vertex == 255:
                     # We already checked that the relator lifts to a loop.
                     continue
-                vertex = self.lift_vertices[j]
                 if vertex == 0:
                     # The state is uninitialized.
                     vertex = v + 1
+                index = self.lift_indices[j]
                 for i in range(index, length):
                     label = w.buffer[w.start + i]
                     save = vertex
@@ -406,7 +421,7 @@ cdef class SimsNode(CoveringSubgraph):
                         vertex = v + 1
                     if vertex == v + 1:
                         # The relator lifts.  Record that information.
-                        child.lift_vertices[j] = vertex
+                        child.lift_vertices[j] = 255
                         child.lift_indices[j] = length
                     else:
                         # No.  Discard this child.
@@ -530,6 +545,7 @@ cdef class NodeManager:
         self.num_relators = tree.num_relators
         self.cache = []
         self.stack = []
+        self.push(tree.root)
 
     cdef get_node(NodeManager self):
         """
@@ -569,7 +585,6 @@ cdef class SimsTreeIterator:
         self.max_degree = tree.max_degree
         self.num_relators = tree.num_relators
         self.manager = NodeManager(tree)
-        self.manager.push(tree.root)
 
     def __next__(self):
         cdef node = self._next()
