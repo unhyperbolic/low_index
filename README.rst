@@ -6,6 +6,13 @@ of Charles Sims' Low Index Subgroups algorithm for enumerating all of
 the conjugacy classes of subgroups of a finitely presented group with
 finite index less than a given bound.
 
+The package is available on pypi, so the simplest way to install it for
+Python versions 3.6 - 3.10 is to use pip:
+
+.. code-block:: bash
+
+    pip3 install low-index
+
 Here is a sample computation:
 
 .. code-block:: python
