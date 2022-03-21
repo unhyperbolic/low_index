@@ -233,12 +233,14 @@ cdef class CoveringSubgraph:
                 return (v + 1, -(l + 1))
         return (0,0)
 
-    cdef inline int _first_empty_slot(self):
-        cdef int v, l
+    cdef inline int _first_empty_slot(CoveringSubgraph self):
+        cdef int v, l, max_edges = self.rank*self.degree
         cdef div_t qr
         cdef unsigned char *incoming = self.incoming
         cdef unsigned char *outgoing = self.outgoing
-        for n in range(self.rank*self.degree):
+        if max_edges == self.num_edges:
+            return 0
+        for n in range(max_edges):
             if outgoing[n] == 0:
                 qr = div(n, self.rank)
                 v = qr.quot
@@ -269,11 +271,9 @@ cdef class SimsNode(CoveringSubgraph):
             memset(self.state_info, 0, 2*size)
             self.lift_indices = self.state_info
             self.lift_vertices = &self.state_info[size]
-
             if lift_indices:
                 for n, c in enumerate(lift_indices):
                     self.state_info[n] = c
-
             if lift_vertices:
                 for n, c in enumerate(lift_vertices):
                     self.state_info[size + n] = c
