@@ -53,18 +53,20 @@ cdef class CoveringSubgraph:
     cdef int num_relators
     cdef unsigned char* outgoing
     cdef unsigned char* incoming
+    cdef unsigned int slot_index
 
     def __cinit__(self, int rank, int max_degree, int num_relators=0,
                   bytes outgoing=b'', bytes incoming=b'',
                   bytes lift_indices=b'', bytes lift_vertices=b''):
-        cdef int n = 0, degree = 1
+        cdef int n = 0, degree = 1, size
         cdef unsigned char b
         self.degree = 1
         self.num_edges = 0
         self.rank = rank
         self.max_degree = max_degree
         self.num_relators = num_relators
-        cdef int size = rank*max_degree
+        self.slot_index = 0
+        size = rank*max_degree
         self.outgoing = <unsigned char *>PyMem_Malloc(size)
         memset(self.outgoing, 0, size)
         self.incoming = <unsigned char *>PyMem_Malloc(size)
@@ -234,23 +236,27 @@ cdef class CoveringSubgraph:
         return (0,0)
 
     cdef inline int _first_empty_slot(CoveringSubgraph self):
-        cdef int v, l, max_edges = self.rank*self.degree
+        cdef int n, v, l, max_edges = self.rank*self.degree
         cdef div_t qr
         cdef unsigned char *incoming = self.incoming
         cdef unsigned char *outgoing = self.outgoing
         if max_edges == self.num_edges:
             return 0
-        for n in range(max_edges):
+        n = self.slot_index
+        while n < max_edges:
             if outgoing[n] == 0:
                 qr = div(n, self.rank)
                 v = qr.quot
                 l = qr.rem
+                self.slot_index = n
                 return ((l + 1) << 8) | (v + 1)
             if incoming[n] == 0:
                 qr = div(n, self.rank)
                 v = qr.quot
                 l = qr.rem
+                self.slot_index = n
                 return (-(l + 1) << 8) | (v + 1)
+            n += 1
         return 0
 
 cdef class SimsNode(CoveringSubgraph):
@@ -312,6 +318,7 @@ cdef class SimsNode(CoveringSubgraph):
         other.degree = self.degree
         other.num_edges = self.num_edges
         other.num_relators = self.num_relators
+        other.slot_index = self.slot_index
         memcpy(other.outgoing, self.outgoing, size)
         memcpy(other.incoming, self.incoming, size)
         if self.num_relators > 0:
@@ -568,12 +575,10 @@ cdef class NodeManager:
 
     cdef pop(NodeManager self):
         cdef SimsNode node = self.stack.pop()
-        node.children = []
         self.cache.append(node)
         return node
 
     cdef recycle(NodeManager self, SimsNode node):
-        node.children = []
         self.cache.append(node)
 
 cdef class SimsTreeIterator:
