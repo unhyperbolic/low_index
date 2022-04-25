@@ -425,6 +425,8 @@ cdef class SimsNode(CoveringSubgraph):
                     if vertex == 0:
                         # The last edge is missing - add it now.
                         child.add_edge(label, save, v+1)
+                        if child._is_complete():
+                            return self.relators_may_lift(child, relators)
                         vertex = v + 1
                     if vertex == v + 1:
                         # The relator lifts.  Record that information.
