@@ -45,6 +45,24 @@ examples = [
         'num_long': 1,
     },
     {
+        'group' : 'Fundamental group of o9_15405',
+        'rank': 2,
+        'relators': [
+            "aaaaabbbaabbbaaaaabbbaabbbaaaaaBBBBBBBB"
+            ],
+        'index': 9,
+        'num_long': 0,
+    },
+    {
+        'group' : 'Fundamental group of o9_15405',
+        'rank': 2,
+        'relators': [
+            "aaaaabbbaabbbaaaaabbbaabbbaaaaaBBBBBBBB"
+            ],
+        'index': 9,
+        'num_long': 1,
+    },
+    {
         'group' : 'Modular Group',
         'rank': 2,
         'relators': [
