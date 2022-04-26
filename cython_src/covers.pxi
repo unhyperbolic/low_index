@@ -170,6 +170,25 @@ cdef class CoveringSubgraph:
         self.incoming[in_index] = from_vertex
         self.num_edges += 1
 
+    cdef verified_add_edge(self, int letter, int from_vertex, int to_vertex):
+        """
+        Add an edge provied that both ends of the edge will go into
+        empty slots.  Return True if the edge is added, False if not.
+        """
+        cdef int out_index, in_index, label = letter
+        if letter < 0:
+            label, from_vertex, to_vertex = -letter, to_vertex, from_vertex
+        if from_vertex > self.degree or to_vertex > self.degree:
+            self.degree += 1
+        out_index = (from_vertex - 1)*self.rank + label - 1
+        in_index = (to_vertex - 1)*self.rank + label - 1
+        if self.outgoing[out_index] != 0 or self.incoming[in_index] != 0:
+            return False
+        self.outgoing[out_index] = to_vertex
+        self.incoming[in_index] = from_vertex
+        self.num_edges += 1
+        return True
+
     cdef remove_edge(self, int letter, int from_vertex, int to_vertex):
         """
         Add an edge.
@@ -393,7 +412,7 @@ cdef class SimsNode(CoveringSubgraph):
         cdef CyclicallyReducedWord w
         cdef char label
         cdef unsigned char index, vertex, save, length
-        cdef int n = 0, v, i = 0, j
+        cdef int n = 0, v, i = 0, j, ok
         cdef int rank = child.rank, max_degree = child.max_degree
         for w in relators:
             length = w.length
@@ -424,8 +443,11 @@ cdef class SimsNode(CoveringSubgraph):
                     # The relator lifts, except the last edge may be missing.
                     if vertex == 0:
                         # The last edge is missing - add it now.
-                        child.add_edge(label, save, v+1)
+                        ok = child.verified_add_edge(label, save, v+1)
+                        if not ok:
+                            return False
                         if child._is_complete():
+                            # Check that all relators lift for the complete graph.
                             return self.relators_may_lift(child, relators)
                         vertex = v + 1
                     if vertex == v + 1:
