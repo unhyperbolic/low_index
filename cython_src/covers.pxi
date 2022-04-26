@@ -694,13 +694,13 @@ cdef class SimsTree:
     cdef int num_relators
     cdef int num_long_relators
 
-    def __init__(self, int rank=1, int max_degree=1, relators=[],
+    def __init__(self, int rank=1, int max_degree=1, relators=None,
                      strategy="spin_short", root=None, int num_long_relators=0):
         self.rank = rank
         self.max_degree = max_degree
         self.strategy = strategy
         self.num_long_relators = num_long_relators
-        relators.sort(key=len)
+        relators = [] if relators is None else sorted(relators, key=len)
         if num_long_relators:
             self.long_relators = [CyclicallyReducedWord(r, self.rank)
                                     for r in relators[-num_long_relators:]]
