@@ -1,5 +1,7 @@
 #include "coveringSubgraph.h"
 
+#include <stdexcept>
+
 CoveringSubgraph::CoveringSubgraph(
         const int rank,
         const int max_degree,
