@@ -1,4 +1,4 @@
-#include "wrapCoveringSubgraph.cpp"
+#include "pybind11/pybind11.h"
 
 void addCoveringSubgraph(pybind11::module_ &m);
 
