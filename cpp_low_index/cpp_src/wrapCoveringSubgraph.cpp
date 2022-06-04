@@ -13,5 +13,5 @@ void addCoveringSubgraph(pybind11::module_ &m) {
         .def("is_complete", &CoveringSubgraph::is_complete)
         .def("add_edge", &CoveringSubgraph::add_edge)
         .def("verified_add_edge", &CoveringSubgraph::verified_add_edge)
-        .def("to_string", &CoveringSubgraph::to_string);
+        .def("__str__", &CoveringSubgraph::to_string);
 }
