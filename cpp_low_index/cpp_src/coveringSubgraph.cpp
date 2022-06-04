@@ -40,6 +40,28 @@ CoveringSubgraph::to_string() const
     return result;
 }
 
+std::vector<std::vector<int>>
+CoveringSubgraph::permutation_rep() const
+{
+    if (!is_complete()) {
+        throw std::domain_error("The graph is not a covering.");
+    }
+
+    std::vector<std::vector<int>> result;
+    result.reserve(rank);
+    
+    for (int l = 0; l < rank; l++) {
+        result.push_back({});
+        std::vector<int> &r = result.back();
+        r.reserve(degree);
+        for (int v = 0; v < degree; v++) {
+            r.push_back(outgoing[v * rank + l] - 1);
+        }
+    }
+            
+    return result;
+}
+
 void
 CoveringSubgraph::add_edge(
     const int letter,
@@ -88,3 +110,4 @@ CoveringSubgraph::_add_edge(
     num_edges++;
     return true;
 }
+

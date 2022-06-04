@@ -29,6 +29,8 @@ public:
     bool verified_add_edge(int letter, int from_vertex, int to_vertex);
 
     std::string to_string() const;
+
+    std::vector<std::vector<int>> permutation_rep() const;
     
 protected:
     int _slot_index;
