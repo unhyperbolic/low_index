@@ -1,6 +1,7 @@
 #include "coveringSubgraph.h"
 
 #include <stdexcept>
+#include <cstdlib>
 
 CoveringSubgraph::CoveringSubgraph(
         const int rank,
@@ -113,3 +114,37 @@ CoveringSubgraph::_add_edge(
     return true;
 }
 
+CoveringSubgraph::IntType
+CoveringSubgraph::act_by(const int letter, const int vertex) const
+{
+    if (letter > 0) {
+        return outgoing[(vertex - 1) * rank + letter - 1];
+    } else {
+        return outgoing[(vertex - 1) * rank - letter - 1];
+    }
+}
+
+std::pair<CoveringSubgraph::IntType, CoveringSubgraph::IntType>
+CoveringSubgraph::first_empty_slot()
+{
+    const int max_edges = rank * degree;
+
+    if (max_edges == num_edges) {
+        return { 0, 0 };
+    }
+
+    for(int n = _slot_index; n < max_edges; n++) {
+        if (outgoing[n] == 0) {
+            const std::div_t qr = std::div(n, rank);
+            _slot_index = n;
+            return { qr.rem + 1, qr. quot + 1 };
+        }
+        if (incoming[n] == 0) {
+            const std::div_t qr = std::div(n, rank);
+            _slot_index = n;
+            return { -(qr.rem + 1), qr. quot + 1 };
+        }
+    }
+
+    return {0, 0};
+}

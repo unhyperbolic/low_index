@@ -16,5 +16,7 @@ void addCoveringSubgraph(pybind11::module_ &m) {
         .def("add_edge", &CoveringSubgraph::add_edge)
         .def("verified_add_edge", &CoveringSubgraph::verified_add_edge)
         .def("__str__", &CoveringSubgraph::to_string)
-        .def("permutation_rep", &CoveringSubgraph::permutation_rep);
+        .def("permutation_rep", &CoveringSubgraph::permutation_rep)
+        .def("act_by", &CoveringSubgraph::act_by)
+        .def("first_empty_slot", &CoveringSubgraph::first_empty_slot);
 }

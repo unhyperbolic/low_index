@@ -31,6 +31,10 @@ public:
     std::string to_string() const;
 
     std::vector<std::vector<int>> permutation_rep() const;
+
+    IntType act_by(int letter, int vertex) const;
+
+    std::pair<IntType, IntType> first_empty_slot();
     
 protected:
     int _slot_index;
