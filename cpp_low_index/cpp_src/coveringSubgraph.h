@@ -5,11 +5,7 @@ class CoveringSubgraph
 {
 public:
     CoveringSubgraph(int rank);
-
-    int GetRank() const { return _rank; }
-    
-private:
-    const int _rank;
+    const int rank;
 };
 
 #endif

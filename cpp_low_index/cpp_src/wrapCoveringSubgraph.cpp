@@ -5,5 +5,5 @@
 void addCoveringSubgraph(pybind11::module_ &m) {
     pybind11::class_<CoveringSubgraph>(m, "CoveringSubgraph")
         .def(pybind11::init<int>())
-        .def("GetRank", &CoveringSubgraph::GetRank);
+        .def_readonly("rank", &CoveringSubgraph::rank);
 }
