@@ -21,8 +21,10 @@ ext_modules = [
         [
             "cpp_src/coveringSubgraph.cpp",
             "cpp_src/simsNode.cpp",
+            "cpp_src/simsTree.cpp",
             "cpp_src/wrapCoveringSubgraph.cpp",
             "cpp_src/wrapSimsNode.cpp",
+            "cpp_src/wrapSimsTree.cpp",
             "cpp_src/wrapModule.cpp"
          ],
         # Example: passing in the version to the compiled code

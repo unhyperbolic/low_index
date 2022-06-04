@@ -8,7 +8,7 @@ CoveringSubgraph::CoveringSubgraph(
         const int max_degree,
         const int num_relators)
   : rank(rank)
-  , degree(0)
+  , degree(1)
   , max_degree(max_degree)
   , num_edges(0)
   , num_relators(num_relators)
