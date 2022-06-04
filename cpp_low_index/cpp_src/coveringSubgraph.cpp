@@ -14,3 +14,77 @@ CoveringSubgraph::CoveringSubgraph(
   , _slot_index(0)
 {
 }
+
+std::string
+CoveringSubgraph::to_string() const
+{
+    std::string result;
+    if (is_complete()) {
+        result = "Covering with edges:";
+    } else {
+        result = "Partial covering with edges:";
+    }
+
+    for (int f = 0; f < degree; f++) {
+        for (int n = 0; n < rank; n++) {
+            if (const IntType t = outgoing[f * rank + n]) {
+                result +=
+                    "\n" +
+                    std::to_string(f+1) + "--" +
+                    std::to_string(n+1) + "->" +
+                    std::to_string(static_cast<int>(t));
+            }
+        }
+    }
+
+    return result;
+}
+
+void
+CoveringSubgraph::add_edge(
+    const int letter,
+    const int from_vertex,
+    const int to_vertex)
+{
+    if (letter < 0) {
+        _add_edge<false>(-letter, to_vertex,   from_vertex);
+    } else {
+        _add_edge<false>( letter, from_vertex, to_vertex);
+    }
+}
+
+bool
+CoveringSubgraph::verified_add_edge(
+    const int letter,
+    const int from_vertex,
+    const int to_vertex)
+{
+    if (letter < 0) {
+        return _add_edge<true>(-letter, to_vertex,   from_vertex);
+    } else {
+        return _add_edge<true>( letter, from_vertex, to_vertex);
+    }
+}
+
+template<bool check>
+bool
+CoveringSubgraph::_add_edge(
+    const int label,
+    const int from_vertex,
+    const int to_vertex)
+{
+    if (from_vertex > degree || to_vertex > degree) {
+        degree++;
+    }
+    const size_t out_index = (from_vertex - 1) * rank + (label - 1);
+    const size_t in_index  = (to_vertex   - 1) * rank + (label - 1);
+    if (check) {
+        if (outgoing[out_index] != 0 || incoming[in_index] != 0) {
+            return false;
+        }
+    }
+    outgoing[out_index] = to_vertex;
+    incoming[in_index]  = from_vertex;
+    num_edges++;
+    return true;
+}

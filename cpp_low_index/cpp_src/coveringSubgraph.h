@@ -2,6 +2,7 @@
 #define _COVERING_SUBGRAPH_H_
 
 #include <vector>
+#include <string>
 
 class CoveringSubgraph
 {
@@ -20,8 +21,21 @@ public:
     std::vector<IntType> outgoing;
     std::vector<IntType> incoming;
 
+    bool is_complete() const {
+        return num_edges == rank * degree;
+    }
+
+    void add_edge(int letter, int from_vertex, int to_vertex);
+    bool verified_add_edge(int letter, int from_vertex, int to_vertex);
+
+    std::string to_string() const;
+    
 protected:
     int _slot_index;
+
+private:
+    template<bool check>
+    bool _add_edge(int label, int from_vertex, int to_vertex);
 };
 
 #endif
