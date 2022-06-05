@@ -20,8 +20,11 @@ public:
     const DegreeType max_degree;
     unsigned int num_edges;
     const unsigned int num_relators;
-    std::vector<DegreeType> outgoing;
-    std::vector<DegreeType> incoming;
+//    std::vector<DegreeType> outgoing;
+//    std::vector<DegreeType> incoming;
+
+    DegreeType outgoing[20];
+    DegreeType incoming[20];
 
     bool is_complete() const {
         return num_edges == rank * degree;

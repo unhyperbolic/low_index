@@ -12,10 +12,14 @@ CoveringSubgraph::CoveringSubgraph(
   , max_degree(max_degree)
   , num_edges(0)
   , num_relators(num_relators)
-  , outgoing(rank * max_degree, 0)
-  , incoming(rank * max_degree, 0)
+//  , outgoing(rank * max_degree, 0)
+//  , incoming(rank * max_degree, 0)
   , _slot_index(0)
 {
+
+    memset(outgoing, 0, sizeof(DegreeType) * rank * max_degree);
+    memset(incoming, 0, sizeof(DegreeType) * rank * max_degree);    
+    
 }
 
 std::string
@@ -135,12 +139,14 @@ CoveringSubgraph::_add_edge(
         }
     }
 
+    /*
     if (out_index >= outgoing.size()) {
         throw std::domain_error("Bad1");
     }
     if (in_index >= incoming.size()) {
         throw std::domain_error("Bad1");
     }
+    */
     
     outgoing[out_index] = to_vertex;
     incoming[in_index]  = from_vertex;
