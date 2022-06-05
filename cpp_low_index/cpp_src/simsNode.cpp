@@ -65,7 +65,7 @@ SimsNode::relators_may_lift(SimsNode * child,
 
             const size_t j = n * max_degree + v;
             
-            DegreeType vertex = _lift_vertices[n * max_degree + v];
+            DegreeType vertex = _lift_vertices[j];
             if (vertex == 255) {
                 continue;
             }
@@ -73,7 +73,7 @@ SimsNode::relators_may_lift(SimsNode * child,
                 vertex = v + 1;
             }
             int i;
-            DegreeType index = _lift_indices[n * max_degree + v];
+            DegreeType index = _lift_indices[j];
             DegreeType save;
             int label;
             for (i = index; i < relators[n].size(); i++) {
@@ -99,6 +99,7 @@ SimsNode::relators_may_lift(SimsNode * child,
                     if (child->is_complete()) {
                         return relators_may_lift(child, relators);
                     }
+                    vertex = v + 1;
                 }
                 if (vertex == v + 1) {
                     child->_lift_vertices[j] = 255;
