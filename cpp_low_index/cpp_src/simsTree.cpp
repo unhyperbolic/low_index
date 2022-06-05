@@ -1,13 +1,24 @@
 #include "simsTree.h"
 
 SimsTree::SimsTree(
+    const SimsNode &root,
+    const std::vector<std::vector<int>> &short_relators,
+    const std::vector<std::vector<int>> &long_relators)
+  : root(root)
+  , short_relators(short_relators)
+  , long_relators(long_relators)
+{
+}
+
+SimsTree::SimsTree(
     const int rank,
     const int max_degree,
     const std::vector<std::vector<int>> &short_relators,
     const std::vector<std::vector<int>> &long_relators)
-  : root(rank, max_degree, short_relators.size())
-  , short_relators(short_relators)
-  , long_relators(long_relators)
+  : SimsTree(
+      SimsNode(rank, max_degree, short_relators.size()),
+      short_relators,
+      long_relators)
 {
 }
 

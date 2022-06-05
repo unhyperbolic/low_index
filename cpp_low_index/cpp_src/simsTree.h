@@ -7,6 +7,11 @@ class SimsTree
 {
 public:
     SimsTree(
+        const SimsNode &root,
+        const std::vector<std::vector<int>> &short_relators,
+        const std::vector<std::vector<int>> &long_relators);
+
+    SimsTree(
         int rank,
         int max_degree,
         const std::vector<std::vector<int>> &short_relators,
