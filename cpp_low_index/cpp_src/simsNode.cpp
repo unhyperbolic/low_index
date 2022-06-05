@@ -49,7 +49,9 @@ SimsNode::get_children(const std::vector<std::vector<int>> &relators) const
         SimsNode new_subgraph(*this);
         new_subgraph.add_edge(slot.first, slot.second, n);
         if (relators_may_lift(&new_subgraph, relators)) {
-            children.push_back(std::move(new_subgraph));
+            if (new_subgraph.may_be_minimal()) {
+                children.push_back(std::move(new_subgraph));
+            }
         }
     }
 
@@ -60,8 +62,8 @@ bool
 SimsNode::relators_may_lift(SimsNode * child,
                             const std::vector<std::vector<int>> &relators) const
 {
-    for (int n = 0; n < relators.size(); n++) {
-        for (int v = 0; v < child->degree; v++) {
+    for (size_t n = 0; n < relators.size(); n++) {
+        for (unsigned int v = 0; v < child->degree; v++) {
 
             const size_t j = n * max_degree + v;
             
@@ -72,7 +74,7 @@ SimsNode::relators_may_lift(SimsNode * child,
             if (vertex == 0) {
                 vertex = v + 1;
             }
-            int i;
+            unsigned int i;
             DegreeType index = _lift_indices[j];
             DegreeType save;
             int label;
@@ -106,6 +108,60 @@ SimsNode::relators_may_lift(SimsNode * child,
                     child->_lift_indices[j] = relators[n].size();
                 } else {
                     return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+bool
+SimsNode::may_be_minimal() const
+{
+    for (DegreeType basepoint = 2; basepoint <= degree; basepoint++) {
+        if (!_may_be_minimal(basepoint)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool
+SimsNode::_may_be_minimal(const DegreeType basepoint) const
+{
+    DegreeType std_to_alt[degree+1];
+    memset(std_to_alt, 0, sizeof(std_to_alt));
+
+    DegreeType alt_to_std[degree+1];
+    memset(alt_to_std, 0, sizeof(alt_to_std));
+
+    std_to_alt[basepoint] = 1;
+    alt_to_std[1] = basepoint;
+
+    DegreeType max_index = 1;
+
+    for (DegreeType slot_vertex = 1; slot_vertex <= degree; slot_vertex++) {
+        for (RankType l = 0; l < rank; l++) {
+            for (const std::vector<DegreeType> &edges : { outgoing, incoming }) {
+                const DegreeType a = edges[
+                    (slot_vertex - 1) * rank + l];
+                const DegreeType b = edges[
+                    (alt_to_std[slot_vertex] - 1) * rank + l];
+                if (a == 0 or b == 0) {
+                    return false;
+                }
+                DegreeType &c = std_to_alt[b];
+                if (c == 0) {
+                    max_index++;
+                    c = max_index;
+                    alt_to_std[max_index] = b;
+                }
+                if (c < a) {
+                    return false;
+                }
+                if (c > a) {
+                    return true;
                 }
             }
         }

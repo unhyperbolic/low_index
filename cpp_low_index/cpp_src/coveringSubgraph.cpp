@@ -22,7 +22,7 @@ std::string
 CoveringSubgraph::to_string() const
 {
     std::string padding;
-    for (int i = 0; i < num_edges; i++) {
+    for (unsigned int i = 0; i < num_edges; i++) {
         padding += "    ";
     }
     
@@ -35,8 +35,8 @@ CoveringSubgraph::to_string() const
     result += " of degree " + std::to_string(degree);
     result += " with " + std::to_string(num_edges) + " edges";
 
-    for (int f = 0; f < degree; f++) {
-        for (int n = 0; n < rank; n++) {
+    for (unsigned int f = 0; f < degree; f++) {
+        for (unsigned int n = 0; n < rank; n++) {
             const DegreeType t = outgoing[f * rank + n];
             const DegreeType s = incoming[f * rank + n];
 
@@ -75,11 +75,11 @@ CoveringSubgraph::permutation_rep() const
     std::vector<std::vector<int>> result;
     result.reserve(rank);
     
-    for (int l = 0; l < rank; l++) {
+    for (unsigned int l = 0; l < rank; l++) {
         result.push_back({});
         std::vector<int> &r = result.back();
         r.reserve(degree);
-        for (int v = 0; v < degree; v++) {
+        for (unsigned int v = 0; v < degree; v++) {
             r.push_back(outgoing[v * rank + l] - 1);
         }
     }
@@ -161,20 +161,22 @@ CoveringSubgraph::act_by(const LetterType letter, const DegreeType vertex) const
 std::pair<CoveringSubgraph::LetterType, CoveringSubgraph::DegreeType>
 CoveringSubgraph::first_empty_slot() const
 {
-    const int max_edges = rank * degree;
+    const unsigned int max_edges = rank * degree;
 
     if (max_edges == num_edges) {
         return { 0, 0 };
     }
 
-    for(int n = _slot_index; n < max_edges; n++) {
+    for(unsigned int n = _slot_index; n < max_edges; n++) {
         if (outgoing[n] == 0) {
-            const std::div_t qr = std::div(n, rank);
+            const std::div_t qr = std::div(
+                static_cast<int>(n), static_cast<int>(rank));
             _slot_index = n;
             return { qr.rem + 1, qr.quot + 1 };
         }
         if (incoming[n] == 0) {
-            const std::div_t qr = std::div(n, rank);
+            const std::div_t qr = std::div(
+                static_cast<int>(n), static_cast<int>(rank));
             _slot_index = n;
             return { -(qr.rem + 1), qr.quot + 1 };
         }
