@@ -6,7 +6,9 @@
 class SimsNode : public CoveringSubgraph
 {
 public:
-    SimsNode(int rank, int max_degree, int num_relators = 0);
+    SimsNode(RankType rank,
+             DegreeType max_degree,
+             unsigned int num_relators = 0);
 
     bool relators_may_lift(SimsNode * child,
                            const std::vector<std::vector<int>> &relators) const;
@@ -15,8 +17,8 @@ public:
         const std::vector<std::vector<int>> &relators) const;
 
 private:
-    std::vector<VertexIndexType> _lift_indices;
-    std::vector<VertexIndexType> _lift_vertices;
+    std::vector<unsigned int> _lift_indices;
+    std::vector<DegreeType> _lift_vertices;
 
 };
 

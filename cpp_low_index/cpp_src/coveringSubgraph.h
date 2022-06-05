@@ -7,20 +7,21 @@
 class CoveringSubgraph
 {
 public:
-    using VertexIndexType = unsigned char;
-    using LetterType = int;
+    using DegreeType = unsigned char;
+    using RankType = unsigned int;
+    using LetterType = std::make_signed<RankType>::type;
 
-    CoveringSubgraph(int rank,
-                     int max_degree,
-                     int num_relators = 0);
+    CoveringSubgraph(RankType rank,
+                     DegreeType max_degree,
+                     unsigned int num_relators = 0);
 
-    const int rank;
-    int degree;
-    const int max_degree;
-    int num_edges;
-    const int num_relators;
-    std::vector<VertexIndexType> outgoing;
-    std::vector<VertexIndexType> incoming;
+    const RankType rank;
+    DegreeType degree;
+    const DegreeType max_degree;
+    unsigned int num_edges;
+    const unsigned int num_relators;
+    std::vector<DegreeType> outgoing;
+    std::vector<DegreeType> incoming;
 
     bool is_complete() const {
         return num_edges == rank * degree;
@@ -33,9 +34,9 @@ public:
 
     std::vector<std::vector<int>> permutation_rep() const;
 
-    VertexIndexType act_by(int letter, int vertex) const;
+    DegreeType act_by(int letter, int vertex) const;
 
-    std::pair<LetterType, VertexIndexType> first_empty_slot() const;
+    std::pair<LetterType, DegreeType> first_empty_slot() const;
 
 protected:
     mutable int _slot_index;

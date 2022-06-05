@@ -2,9 +2,10 @@
 
 #include "simsNode.h"
 
-SimsNode::SimsNode(const int rank,
-                   const int max_degree,
-                   const int num_relators)
+SimsNode::SimsNode(
+        const CoveringSubgraph::RankType rank,
+        const CoveringSubgraph::DegreeType max_degree,
+        const unsigned int num_relators)
  : CoveringSubgraph(rank, max_degree, num_relators)
  , _lift_indices(num_relators * max_degree, 0)
  , _lift_vertices(num_relators * max_degree, 0)
@@ -16,9 +17,9 @@ SimsNode::get_children(const std::vector<std::vector<int>> &relators) const
 {
     std::vector<SimsNode> children;
     
-    const std::pair<int, VertexIndexType> slot = first_empty_slot();
+    const std::pair<int, DegreeType> slot = first_empty_slot();
 
-    if (slot == std::pair<int, VertexIndexType>{ 0, 0 }) {
+    if (slot == std::pair<int, DegreeType>{ 0, 0 }) {
         return {};
     }
 
@@ -64,7 +65,7 @@ SimsNode::relators_may_lift(SimsNode * child,
 
             const size_t j = n * max_degree + v;
             
-            VertexIndexType vertex = _lift_vertices[n * max_degree + v];
+            DegreeType vertex = _lift_vertices[n * max_degree + v];
             if (vertex == 255) {
                 continue;
             }
@@ -72,8 +73,8 @@ SimsNode::relators_may_lift(SimsNode * child,
                 vertex = v + 1;
             }
             int i;
-            VertexIndexType index = _lift_indices[n * max_degree + v];
-            VertexIndexType save;
+            DegreeType index = _lift_indices[n * max_degree + v];
+            DegreeType save;
             int label;
             for (i = index; i < relators[n].size(); i++) {
                 label = relators[n][i];

@@ -4,9 +4,9 @@
 #include <cstdlib>
 
 CoveringSubgraph::CoveringSubgraph(
-        const int rank,
-        const int max_degree,
-        const int num_relators)
+        const CoveringSubgraph::RankType rank,
+        const CoveringSubgraph::DegreeType max_degree,
+        const unsigned int num_relators)
   : rank(rank)
   , degree(1)
   , max_degree(max_degree)
@@ -37,8 +37,8 @@ CoveringSubgraph::to_string() const
 
     for (int f = 0; f < degree; f++) {
         for (int n = 0; n < rank; n++) {
-            const VertexIndexType t = outgoing[f * rank + n];
-            const VertexIndexType s = incoming[f * rank + n];
+            const DegreeType t = outgoing[f * rank + n];
+            const DegreeType s = incoming[f * rank + n];
 
             if (t != 0 || s != 0) {
                 result += "\n" + padding;
@@ -127,8 +127,8 @@ CoveringSubgraph::_add_edge(
     if (from_vertex > degree || to_vertex > degree) {
         degree++;
     }
-    const size_t out_index = (from_vertex - 1) * rank + (label - 1);
-    const size_t in_index  = (to_vertex   - 1) * rank + (label - 1);
+    const unsigned int out_index = (from_vertex - 1) * rank + (label - 1);
+    const unsigned int in_index  = (to_vertex   - 1) * rank + (label - 1);
     if (check) {
         if (outgoing[out_index] != 0 || incoming[in_index] != 0) {
             return false;
@@ -148,7 +148,7 @@ CoveringSubgraph::_add_edge(
     return true;
 }
 
-CoveringSubgraph::VertexIndexType
+CoveringSubgraph::DegreeType
 CoveringSubgraph::act_by(const int letter, const int vertex) const
 {
     if (letter > 0) {
@@ -158,7 +158,7 @@ CoveringSubgraph::act_by(const int letter, const int vertex) const
     }
 }
 
-std::pair<CoveringSubgraph::LetterType, CoveringSubgraph::VertexIndexType>
+std::pair<CoveringSubgraph::LetterType, CoveringSubgraph::DegreeType>
 CoveringSubgraph::first_empty_slot() const
 {
     const int max_edges = rank * degree;
