@@ -33,13 +33,29 @@ SimsTree::list()
 }
 
 void
-SimsTree::_recurse(const SimsNode &n, std::vector<SimsNode> *node)
+SimsTree::_recurse(const SimsNode &n, std::vector<SimsNode> *nodes)
 {
     if(n.is_complete() && n.relators_lift(long_relators)) {
-        node->push_back(n);
+        nodes->push_back(n);
     } else {
         for (const SimsNode &child : n.get_children(short_relators)) {
-            _recurse(child, node);
+            _recurse(child, nodes);
         }
     }
+}
+
+std::deque<SimsNode>
+SimsTree::bloom(const size_t n)
+{
+    std::deque<SimsNode> result = { root };
+
+    bool keepGoing = true;
+
+    while (result.size() < n && keepGoing) {
+        keepGoing = false;
+
+        result.front()
+    }
+
+    return result;
 }

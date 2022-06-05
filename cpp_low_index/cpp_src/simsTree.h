@@ -3,6 +3,8 @@
 
 #include "simsNode.h"
 
+#include <deque>
+
 class SimsTree
 {
 public:
@@ -20,12 +22,14 @@ public:
     SimsNode root;
 
     std::vector<SimsNode> list();
+
+    std::deque<SimsNode> bloom(size_t n);
     
 private:
     const std::vector<std::vector<int>> short_relators;
     const std::vector<std::vector<int>> long_relators;
 
-    void _recurse(const SimsNode &n, std::vector<SimsNode> *node);
+    void _recurse(const SimsNode &n, std::vector<SimsNode> *nodes);
 };
 
 #endif
