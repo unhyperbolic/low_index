@@ -54,7 +54,7 @@ SimsTree::bloom(const size_t n)
     while (result.size() < n && keepGoing) {
         keepGoing = false;
 
-        result.front()
+        result.front();
     }
 
     return result;
