@@ -27,14 +27,14 @@ public:
         return num_edges == rank * degree;
     }
 
-    void add_edge(int letter, int from_vertex, int to_vertex);
-    bool verified_add_edge(int letter, int from_vertex, int to_vertex);
+    void add_edge(LetterType letter, DegreeType from_vertex, DegreeType to_vertex);
+    bool verified_add_edge(LetterType letter, DegreeType from_vertex, DegreeType to_vertex);
 
     std::string to_string() const;
 
     std::vector<std::vector<int>> permutation_rep() const;
 
-    DegreeType act_by(int letter, int vertex) const;
+    DegreeType act_by(LetterType letter, DegreeType vertex) const;
 
     std::pair<LetterType, DegreeType> first_empty_slot() const;
 
@@ -43,7 +43,7 @@ protected:
 
 private:
     template<bool check>
-    bool _add_edge(int label, int from_vertex, int to_vertex);
+    bool _add_edge(LetterType label, DegreeType from_vertex, DegreeType to_vertex);
 };
 
 #endif

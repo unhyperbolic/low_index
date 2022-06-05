@@ -89,9 +89,9 @@ CoveringSubgraph::permutation_rep() const
 
 void
 CoveringSubgraph::add_edge(
-    const int letter,
-    const int from_vertex,
-    const int to_vertex)
+    const LetterType letter,
+    const DegreeType from_vertex,
+    const DegreeType to_vertex)
 {
     if (letter < 0) {
         if(!_add_edge<true>(-letter, to_vertex,   from_vertex)) {
@@ -106,9 +106,9 @@ CoveringSubgraph::add_edge(
 
 bool
 CoveringSubgraph::verified_add_edge(
-    const int letter,
-    const int from_vertex,
-    const int to_vertex)
+    const LetterType letter,
+    const DegreeType from_vertex,
+    const DegreeType to_vertex)
 {
     if (letter < 0) {
         return _add_edge<true>(-letter, to_vertex,   from_vertex);
@@ -120,9 +120,9 @@ CoveringSubgraph::verified_add_edge(
 template<bool check>
 bool
 CoveringSubgraph::_add_edge(
-    const int label,
-    const int from_vertex,
-    const int to_vertex)
+    const LetterType label,
+    const DegreeType from_vertex,
+    const DegreeType to_vertex)
 {
     if (from_vertex > degree || to_vertex > degree) {
         degree++;
@@ -149,12 +149,12 @@ CoveringSubgraph::_add_edge(
 }
 
 CoveringSubgraph::DegreeType
-CoveringSubgraph::act_by(const int letter, const int vertex) const
+CoveringSubgraph::act_by(const LetterType letter, const DegreeType vertex) const
 {
     if (letter > 0) {
         return outgoing[(vertex - 1) * rank + letter - 1];
     } else {
-        return outgoing[(vertex - 1) * rank - letter - 1];
+        return incoming[(vertex - 1) * rank - letter - 1];
     }
 }
 
