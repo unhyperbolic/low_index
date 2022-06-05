@@ -55,7 +55,7 @@ CoveringSubgraph::to_string() const
                 if (s != 0) {
                     result +=
                         std::to_string(f+1) + "--(" +
-                        std::to_string(-(n+1)) + ")->" +
+                        std::to_string(-static_cast<int>(n+1)) + ")->" +
                         std::to_string(static_cast<int>(s));
                 }
             }
