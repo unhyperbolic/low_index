@@ -49,9 +49,66 @@ SimsNode::sprout(const std::vector<std::vector<int>> &relators)
         std::cout << "target " << n << std::endl;
         
         SimsNode new_subgraph(*this);
-        if (true) {
-            new_subgraph.add_edge(slot.first, slot.second, n);
+        new_subgraph.add_edge(slot.first, slot.second, n);
+        if (relators_may_lift(&new_subgraph, relators)) {
             _children.push_back(std::move(new_subgraph));
         }
     }
+}
+
+bool
+SimsNode::relators_may_lift(SimsNode * child,
+                            const std::vector<std::vector<int>> &relators)
+{
+    for (int n = 0; n < relators.size(); n++) {
+        for (int v = 0; v < child->degree; v++) {
+
+            const size_t j = n * max_degree + v;
+            
+            VertexIndexType vertex = _lift_vertices[n * max_degree + v];
+            if (vertex == 255) {
+                continue;
+            }
+            if (vertex == 0) {
+                vertex = v + 1;
+            }
+            int i;
+            VertexIndexType index = _lift_indices[n * max_degree + v];
+            VertexIndexType save;
+            int label;
+            for (i = index; i < relators[n].size(); i++) {
+                label = relators[n][i];
+                save = vertex;
+                if (label > 0) {
+                    vertex = outgoing[rank * (vertex - 1) + label - 1];
+                } else {
+                    vertex = incoming[rank * (vertex - 1) - label - 1];
+                }
+                if (vertex == 0) {
+                    child->_lift_vertices[j] = save;
+                    child->_lift_indices[j] = i;
+                    break;
+                }
+            }
+
+            if (i >= relators[n].size() - 1) {
+                if (vertex == 0) {
+                    if (!child->verified_add_edge(label, save, v + 1)) {
+                        return false;
+                    }
+                    if (child->is_complete()) {
+                        return relators_may_lift(child, relators);
+                    }
+                }
+                if (vertex == v + 1) {
+                    child->_lift_vertices[j] = 255;
+                    child->_lift_indices[j] = relators[n].size();
+                } else {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
 }

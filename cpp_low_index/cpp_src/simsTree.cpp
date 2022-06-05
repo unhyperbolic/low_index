@@ -40,7 +40,7 @@ SimsTree::_recurse(const SimsNode &n, std::vector<SimsNode> *node)
         node->push_back(n);
     } else {
         SimsNode tmp(n);
-        tmp.sprout({});
+        tmp.sprout(relators);
 //        const SimsNode * hacky = &n;
 //        const_cast<SimsNode*>(hacky)->sprout({});
         for (const SimsNode &child : tmp._children) {
