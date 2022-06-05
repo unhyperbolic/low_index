@@ -14,6 +14,8 @@ public:
                            const std::vector<std::vector<int>> &relators) const;
     bool may_be_minimal() const;
 
+    bool relators_lift(const std::vector<std::vector<int>> &relators) const;
+
     std::vector<SimsNode> get_children(
         const std::vector<std::vector<int>> &relators) const;
 

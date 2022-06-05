@@ -114,6 +114,27 @@ SimsNode::relators_may_lift(SimsNode * child,
 }
 
 bool
+SimsNode::relators_lift(const std::vector<std::vector<int>> &relators) const
+{
+    for (const std::vector<int> &relator : relators) {
+        for (DegreeType v = 1; v <= degree; v++) {
+            DegreeType vertex = v;
+            for (const int letter : relator) {
+                vertex = act_by(letter, vertex);
+                if (vertex == 0) {
+                    throw std::domain_error("relators_lift: The graph is not a covering.");
+                }
+            }
+            if (vertex != v) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool
 SimsNode::may_be_minimal() const
 {
     for (DegreeType basepoint = 2; basepoint <= degree; basepoint++) {
