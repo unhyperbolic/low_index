@@ -149,7 +149,7 @@ SimsNode::_may_be_minimal(const DegreeType basepoint) const
                 const DegreeType b = edges[
                     (alt_to_std[slot_vertex] - 1) * rank + l];
                 if (a == 0 or b == 0) {
-                    return false;
+                    return true;
                 }
                 DegreeType &c = std_to_alt[b];
                 if (c == 0) {
