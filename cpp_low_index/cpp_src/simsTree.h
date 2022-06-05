@@ -9,14 +9,16 @@ public:
     SimsTree(
         int rank,
         int max_degree,
-        const std::vector<std::vector<int>> &relators);
+        const std::vector<std::vector<int>> &short_relators,
+        const std::vector<std::vector<int>> &long_relators);
 
     SimsNode root;
 
     std::vector<SimsNode> list();
     
 private:
-    const std::vector<std::vector<int>> relators;
+    const std::vector<std::vector<int>> short_relators;
+    const std::vector<std::vector<int>> long_relators;
 
     void _recurse(const SimsNode &n, std::vector<SimsNode> *node);
 };
