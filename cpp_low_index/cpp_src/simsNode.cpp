@@ -15,11 +15,11 @@ void
 SimsNode::sprout(const std::vector<std::vector<int>> &relators)
 {
     
-    const std::pair<IntType, IntType> slot = first_empty_slot();
+    const std::pair<int, VertexIndexType> slot = first_empty_slot();
 
     std::cout << "sprout" << std::endl;
     
-    if (slot == std::pair<IntType, IntType>{ 0, 0 }) {
+    if (slot == std::pair<int, VertexIndexType>{ 0, 0 }) {
         return;
     }
 

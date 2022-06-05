@@ -13,8 +13,8 @@ public:
     std::vector<SimsNode> _children;
 
 private:
-    std::vector<IntType> _lift_indices;
-    std::vector<IntType> _lift_vertices;
+    std::vector<VertexIndexType> _lift_indices;
+    std::vector<VertexIndexType> _lift_vertices;
 
 };
 

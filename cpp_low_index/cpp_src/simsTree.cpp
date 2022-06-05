@@ -39,9 +39,11 @@ SimsTree::_recurse(const SimsNode &n, std::vector<SimsNode> *node)
         
         node->push_back(n);
     } else {
-        const SimsNode * hacky = &n;
-        const_cast<SimsNode*>(hacky)->sprout({});
-        for (const SimsNode &child : n._children) {
+        SimsNode tmp(n);
+        tmp.sprout({});
+//        const SimsNode * hacky = &n;
+//        const_cast<SimsNode*>(hacky)->sprout({});
+        for (const SimsNode &child : tmp._children) {
 
             std::cout << "Processing child" << std::endl;
             

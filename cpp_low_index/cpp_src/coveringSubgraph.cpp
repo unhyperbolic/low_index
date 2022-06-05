@@ -30,7 +30,7 @@ CoveringSubgraph::to_string() const
 
     for (int f = 0; f < degree; f++) {
         for (int n = 0; n < rank; n++) {
-            if (const IntType t = outgoing[f * rank + n]) {
+            if (const VertexIndexType t = outgoing[f * rank + n]) {
                 result +=
                     "\n" +
                     std::to_string(f+1) + "--" +
@@ -108,13 +108,21 @@ CoveringSubgraph::_add_edge(
             return false;
         }
     }
+
+    if (out_index >= outgoing.size()) {
+        throw std::domain_error("Bad1");
+    }
+    if (in_index >= incoming.size()) {
+        throw std::domain_error("Bad1");
+    }
+    
     outgoing[out_index] = to_vertex;
     incoming[in_index]  = from_vertex;
     num_edges++;
     return true;
 }
 
-CoveringSubgraph::IntType
+CoveringSubgraph::VertexIndexType
 CoveringSubgraph::act_by(const int letter, const int vertex) const
 {
     if (letter > 0) {
@@ -124,7 +132,7 @@ CoveringSubgraph::act_by(const int letter, const int vertex) const
     }
 }
 
-std::pair<CoveringSubgraph::IntType, CoveringSubgraph::IntType>
+std::pair<CoveringSubgraph::LetterType, CoveringSubgraph::VertexIndexType>
 CoveringSubgraph::first_empty_slot()
 {
     const int max_edges = rank * degree;
