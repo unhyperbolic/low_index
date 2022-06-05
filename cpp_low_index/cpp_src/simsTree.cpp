@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "simsTree.h"
 
 SimsTree::SimsTree(
@@ -24,8 +22,6 @@ SimsTree::list()
 void
 SimsTree::_recurse(const SimsNode &n, std::vector<SimsNode> *node)
 {
-    std::cout << n.to_string() << "\n" << std::endl;
-    
     if(n.is_complete()) {
         node->push_back(n);
     } else {

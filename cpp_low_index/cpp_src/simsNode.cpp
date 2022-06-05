@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "simsNode.h"
 
 SimsNode::SimsNode(
@@ -64,9 +62,6 @@ SimsNode::relators_may_lift(SimsNode * child,
 {
     for (size_t n = 0; n < relators.size(); n++) {
         for (unsigned int v = 0; v < child->degree; v++) {
-
-            std::cout << "Checking relator " << n << " for node " << v << std::endl;
-
             const size_t j = n * max_degree + v;
             
             DegreeType vertex = _lift_vertices[j];
@@ -95,12 +90,9 @@ SimsNode::relators_may_lift(SimsNode * child,
                 }
             }
 
-            std::cout << "Ending loop with i = " << i << std::endl;
-            
             if (i >= relators[n].size() - 1) {
                 if (vertex == 0) {
                     if (!child->verified_add_edge(label, save, v + 1)) {
-                        std::cout << "verified_add_edge false" << std::endl;
                         return false;
                     }
                     if (child->is_complete()) {
@@ -112,7 +104,6 @@ SimsNode::relators_may_lift(SimsNode * child,
                     child->_lift_vertices[j] = 255;
                     child->_lift_indices[j] = relators[n].size();
                 } else {
-                    std::cout << "no false" << std::endl;
                     return false;
                 }
             }
