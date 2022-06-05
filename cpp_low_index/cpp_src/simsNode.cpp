@@ -14,11 +14,10 @@ SimsNode::SimsNode(const int rank,
 void
 SimsNode::sprout(const std::vector<std::vector<int>> &relators)
 {
+    _children.clear();
     
     const std::pair<int, VertexIndexType> slot = first_empty_slot();
 
-    std::cout << "sprout" << std::endl;
-    
     if (slot == std::pair<int, VertexIndexType>{ 0, 0 }) {
         return;
     }
@@ -37,22 +36,32 @@ SimsNode::sprout(const std::vector<std::vector<int>> &relators)
         }
     } else {
         for (int n = 0; n < degree; n++) {
-            if (incoming[n * rank - slot.first - 1] == 0) {
+            if (outgoing[n * rank - slot.first - 1] == 0) {
                 targets.push_back(n+1);
             }
         }
     }
 
     _children.reserve(targets.size());
+
+    std::string padding;
+    for (int i = 0; i < num_edges; i++) {
+        padding += "    ";
+    }
+
     
     for (const int n : targets) {
-        std::cout << "target " << n << std::endl;
-        
-        SimsNode new_subgraph(*this);
-        new_subgraph.add_edge(slot.first, slot.second, n);
+
+        std::cout << padding << "add_edge " << slot.first << " " << static_cast<int>(slot.second) << " " << n << std::endl;
+                                
+                                
+                                SimsNode new_subgraph(*this);
+                                new_subgraph.add_edge(slot.first, slot.second, n);
         if (relators_may_lift(&new_subgraph, relators)) {
             _children.push_back(std::move(new_subgraph));
         }
+                                std::cout << std::endl;
+                                
     }
 }
 

@@ -21,21 +21,43 @@ CoveringSubgraph::CoveringSubgraph(
 std::string
 CoveringSubgraph::to_string() const
 {
-    std::string result;
-    if (is_complete()) {
-        result = "Covering with edges:";
-    } else {
-        result = "Partial covering with edges:";
+    std::string padding;
+    for (int i = 0; i < num_edges; i++) {
+        padding += "    ";
     }
+    
+    std::string result = padding;
+    if (is_complete()) {
+        result += "Covering";
+    } else {
+        result += "Partial covering";
+    }
+    result += " of degree " + std::to_string(degree);
+    result += " with " + std::to_string(num_edges) + " edges";
 
     for (int f = 0; f < degree; f++) {
         for (int n = 0; n < rank; n++) {
-            if (const VertexIndexType t = outgoing[f * rank + n]) {
-                result +=
-                    "\n" +
-                    std::to_string(f+1) + "--" +
-                    std::to_string(n+1) + "->" +
-                    std::to_string(static_cast<int>(t));
+            const VertexIndexType t = outgoing[f * rank + n];
+            const VertexIndexType s = incoming[f * rank + n];
+
+            if (t != 0 || s != 0) {
+                result += "\n" + padding;
+                if (t != 0) {
+                    result +=
+                        std::to_string(f+1) + "--( " +
+                        std::to_string(n+1) + ")->" +
+                        std::to_string(static_cast<int>(t));
+                } else {
+                    result +=
+                        "         ";
+                }
+                result += "      ";
+                if (s != 0) {
+                    result +=
+                        std::to_string(f+1) + "--(" +
+                        std::to_string(-(n+1)) + ")->" +
+                        std::to_string(static_cast<int>(s));
+                }
             }
         }
     }
@@ -72,9 +94,13 @@ CoveringSubgraph::add_edge(
     const int to_vertex)
 {
     if (letter < 0) {
-        _add_edge<false>(-letter, to_vertex,   from_vertex);
+        if(!_add_edge<true>(-letter, to_vertex,   from_vertex)) {
+            throw std::domain_error("Bad add edge.");
+        }
     } else {
-        _add_edge<false>( letter, from_vertex, to_vertex);
+        if(!_add_edge<true>( letter, from_vertex, to_vertex)) {
+            throw std::domain_error("Bad add edge.");
+        }
     }
 }
 
@@ -145,12 +171,12 @@ CoveringSubgraph::first_empty_slot()
         if (outgoing[n] == 0) {
             const std::div_t qr = std::div(n, rank);
             _slot_index = n;
-            return { qr.rem + 1, qr. quot + 1 };
+            return { qr.rem + 1, qr.quot + 1 };
         }
         if (incoming[n] == 0) {
             const std::div_t qr = std::div(n, rank);
             _slot_index = n;
-            return { -(qr.rem + 1), qr. quot + 1 };
+            return { -(qr.rem + 1), qr.quot + 1 };
         }
     }
 

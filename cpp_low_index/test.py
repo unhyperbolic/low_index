@@ -32,11 +32,12 @@ print(cs.permutation_rep())
 
 t = cpp_low_index.SimsTree(2, 2, [])
 
-print("==============")
 
 #t.pyList()
 
 l = t.list()
+
+print("==============")
 
 for x in l:
     print(x)
