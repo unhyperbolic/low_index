@@ -159,7 +159,7 @@ CoveringSubgraph::act_by(const int letter, const int vertex) const
 }
 
 std::pair<CoveringSubgraph::LetterType, CoveringSubgraph::VertexIndexType>
-CoveringSubgraph::first_empty_slot()
+CoveringSubgraph::first_empty_slot() const
 {
     const int max_edges = rank * degree;
 

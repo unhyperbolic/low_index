@@ -35,10 +35,10 @@ public:
 
     VertexIndexType act_by(int letter, int vertex) const;
 
-    std::pair<LetterType, VertexIndexType> first_empty_slot();
+    std::pair<LetterType, VertexIndexType> first_empty_slot() const;
 
 protected:
-    int _slot_index;
+    mutable int _slot_index;
 
 private:
     template<bool check>

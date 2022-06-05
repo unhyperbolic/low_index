@@ -7,6 +7,5 @@
 void addSimsTree(pybind11::module_ &m) {
     pybind11::class_<SimsTree>(m, "SimsTree")
         .def(pybind11::init<int, int, const std::vector<std::vector<int>>&>())
-        .def("list", &SimsTree::list)
-        .def("pyList", &SimsTree::pyList);
+        .def("list", &SimsTree::list);
 }

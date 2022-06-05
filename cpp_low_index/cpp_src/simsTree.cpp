@@ -11,12 +11,6 @@ SimsTree::SimsTree(
 {
 }
 
-void
-SimsTree::pyList()
-{
-    list();
-}
-
 std::vector<SimsNode>
 SimsTree::list()
 {
@@ -35,12 +29,7 @@ SimsTree::_recurse(const SimsNode &n, std::vector<SimsNode> *node)
     if(n.is_complete()) {
         node->push_back(n);
     } else {
-        SimsNode tmp(n);
-
-        tmp.sprout(relators);
-//        const SimsNode * hacky = &n;
-//        const_cast<SimsNode*>(hacky)->sprout({});
-        for (const SimsNode &child : tmp._children) {
+        for (const SimsNode &child : n.get_children(relators)) {
             _recurse(child, node);
         }
     }

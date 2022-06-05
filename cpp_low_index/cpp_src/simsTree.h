@@ -14,8 +14,6 @@ public:
     SimsNode root;
 
     std::vector<SimsNode> list();
-
-    void pyList();
     
 private:
     const std::vector<std::vector<int>> relators;
