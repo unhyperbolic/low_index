@@ -95,9 +95,9 @@ SimsNode::relators_may_lift(const std::vector<std::vector<int>> &relators)
                     if (!verified_add_edge(label, save, v + 1)) {
                         return false;
                     }
-//                    if (is_complete()) {
-//                        return true;
-//                    }
+                    // Note that there is an "if child._is_complete(): return self.relators_may_lift(child, relators)"
+                    // in covers.pxi - which I am skipping here.
+                    // I hope that is correct.
                     vertex = v + 1;
                 }
                 if (vertex == v + 1) {
