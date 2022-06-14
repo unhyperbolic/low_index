@@ -12,7 +12,7 @@ public:
     }
 
     StackedSimsNode(const StackedSimsNode &other)
-        : SimsNode(other, reinterpret_cast<uint8_t*>(other.outgoing) + 2 * other.rank * other.max_degree * sizeof(DegreeType) + other.num_relators * other.max_degree * (sizeof(RelatorLengthType) + sizeof(DegreeType)))
+     : SimsNode(other, reinterpret_cast<uint8_t*>(other.outgoing) + other.size)
     {
     }
 };

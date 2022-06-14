@@ -21,6 +21,8 @@ public:
     bool relators_may_lift(const std::vector<std::vector<int>> &relators);
     bool may_be_minimal() const;
 
+    size_t size;
+
 private:
     bool _may_be_minimal(DegreeType basepoint) const;
 
