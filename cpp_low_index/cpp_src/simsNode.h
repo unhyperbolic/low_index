@@ -10,11 +10,10 @@ public:
 
     SimsNode(RankType rank,
              DegreeType max_degree,
-             unsigned int num_relators = 0);
+             unsigned int num_relators,
+             uint8_t * memory);
 
-    SimsNode(const SimsNode &other);
-
-    ~SimsNode();
+    SimsNode(const SimsNode &other, uint8_t * memory);
 
     const unsigned int num_relators;
 

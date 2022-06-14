@@ -1,0 +1,37 @@
+#ifndef _HEAPED_SIMS_NODE_H_
+#define _HEAPED_SIMS_NODE_H_
+
+#include "simsNode.h"
+
+#include <memory>
+
+class HeapStorage
+{
+protected:
+    HeapStorage(const size_t n) : _data(new uint8_t[n]) { }
+
+    uint8_t * _get_mem() { return _data.get(); }
+    
+private:
+    std::unique_ptr<uint8_t[]> _data;
+};
+
+class HeapedSimsNode : public HeapStorage, public SimsNode
+{
+public:
+    HeapedSimsNode(RankType rank,
+                   DegreeType max_degree,
+                   unsigned int num_relators)
+      : HeapStorage(2 * rank * max_degree * sizeof(DegreeType))
+      , SimsNode(rank, max_degree, num_relators, _get_mem())
+    {
+    }
+
+    HeapedSimsNode(const HeapedSimsNode &other)
+      : HeapStorage(2 * other.rank * other.max_degree * sizeof(DegreeType))
+      , SimsNode(other, _get_mem())
+    {
+    }
+};
+
+#endif
