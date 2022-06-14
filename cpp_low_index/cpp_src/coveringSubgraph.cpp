@@ -10,10 +10,31 @@ CoveringSubgraph::CoveringSubgraph(
   , degree(1)
   , max_degree(max_degree)
   , num_edges(0)
-  , outgoing(rank * max_degree, 0)
-  , incoming(rank * max_degree, 0)
+  , outgoing(new DegreeType[rank * max_degree])
+  , incoming(new DegreeType[rank * max_degree])
   , _slot_index(0)
 {
+    memset(outgoing, 0, sizeof(DegreeType) * rank * max_degree);
+    memset(incoming, 0, sizeof(DegreeType) * rank * max_degree);
+}
+
+CoveringSubgraph::CoveringSubgraph(const CoveringSubgraph &other)
+  : rank(other.rank)
+  , degree(other.degree)
+  , max_degree(other.max_degree)
+  , num_edges(other.num_edges)
+  , outgoing(new DegreeType[rank * max_degree])
+  , incoming(new DegreeType[rank * max_degree])
+  , _slot_index(other._slot_index)
+{
+    memcpy(outgoing, other.outgoing, sizeof(DegreeType) * rank * max_degree);
+    memcpy(incoming, other.incoming, sizeof(DegreeType) * rank * max_degree);
+}
+
+CoveringSubgraph::~CoveringSubgraph()
+{
+    delete []outgoing;
+    delete []incoming;
 }
 
 std::string
@@ -133,12 +154,14 @@ CoveringSubgraph::_add_edge(
         }
     }
 
+    /*
     if (out_index >= outgoing.size()) {
         throw std::domain_error("Bad1");
     }
     if (in_index >= incoming.size()) {
         throw std::domain_error("Bad1");
     }
+    */
     
     outgoing[out_index] = to_vertex;
     incoming[in_index]  = from_vertex;

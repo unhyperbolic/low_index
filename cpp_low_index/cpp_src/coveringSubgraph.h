@@ -19,12 +19,16 @@ public:
     CoveringSubgraph(RankType rank,
                      DegreeType max_degree);
 
+    CoveringSubgraph(const CoveringSubgraph &other);
+
+    ~CoveringSubgraph();
+    
     const RankType rank;
     DegreeType degree;
     const DegreeType max_degree;
     unsigned int num_edges;
-    std::vector<DegreeType> outgoing;
-    std::vector<DegreeType> incoming;
+    DegreeType *outgoing;
+    DegreeType *incoming;
 
     bool is_complete() const {
         return num_edges == rank * degree;

@@ -111,7 +111,7 @@ SimsNode::_may_be_minimal(const DegreeType basepoint) const
 
     for (DegreeType slot_vertex = 1; slot_vertex <= degree; slot_vertex++) {
         for (RankType l = 0; l < rank; l++) {
-            for (const std::vector<DegreeType> &edges : { outgoing, incoming }) {
+            for (const DegreeType * const edges : { outgoing, incoming }) {
                 const DegreeType a = edges[
                     (slot_vertex - 1) * rank + l];
                 const DegreeType b = edges[
