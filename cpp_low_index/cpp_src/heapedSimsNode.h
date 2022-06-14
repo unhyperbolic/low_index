@@ -32,6 +32,12 @@ public:
       , SimsNode(other, _get_mem())
     {
     }
+
+    HeapedSimsNode(const SimsNode &other)
+      : HeapStorage(2 * other.rank * other.max_degree * sizeof(DegreeType) + other.num_relators * other.max_degree * (sizeof(RelatorLengthType) + sizeof(DegreeType)))
+      , SimsNode(other, _get_mem())
+    {
+    }
 };
 
 #endif

@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "simsTree.h"
+#include "stackedSimsNode.h"
 
 SimsTree::SimsTree(
     const HeapedSimsNode &root,
@@ -29,19 +30,17 @@ SimsTree::list()
 {
     std::vector<HeapedSimsNode> nodes;
 
-    _recurse(root, &nodes);
+    std::unique_ptr<uint8_t[]> memory(new uint8_t[10000000]);
 
-    std::cout << "at list end" << std::endl;
-
-    for (const HeapedSimsNode &n : nodes) {
-        std::cout << n.to_string() << std::endl;
-    }
+    StackedSimsNode stackedRoot(root, memory.get());
     
+    _recurse(stackedRoot, &nodes);
+
     return nodes;
 }
 
 void
-SimsTree::_recurse(const HeapedSimsNode &n, std::vector<HeapedSimsNode> *nodes)
+SimsTree::_recurse(const StackedSimsNode &n, std::vector<HeapedSimsNode> *nodes)
 {
     if(n.is_complete() && n.relators_lift(long_relators)) {
         nodes->push_back(n);
@@ -54,7 +53,7 @@ SimsTree::_recurse(const HeapedSimsNode &n, std::vector<HeapedSimsNode> *nodes)
                                                 n.max_degree);
         for (CoveringSubgraph::DegreeType v = 1; v <= m; v++) {
             if (n.act_by(-slot.first, v) == 0) {
-                HeapedSimsNode new_subgraph(n);
+                StackedSimsNode new_subgraph(n);
                 new_subgraph.add_edge(slot.first, slot.second, v);
                 if (new_subgraph.relators_may_lift(short_relators)) {
                     if (new_subgraph.may_be_minimal()) {

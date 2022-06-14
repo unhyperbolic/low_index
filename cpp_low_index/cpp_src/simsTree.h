@@ -2,6 +2,7 @@
 #define _SIMS_TREE_H
 
 #include "heapedSimsNode.h"
+#include "stackedSimsNode.h"
 
 #include <deque>
 
@@ -29,7 +30,7 @@ private:
     const std::vector<std::vector<int>> short_relators;
     const std::vector<std::vector<int>> long_relators;
 
-    void _recurse(const HeapedSimsNode &n, std::vector<HeapedSimsNode> *nodes);
+    void _recurse(const StackedSimsNode &n, std::vector<HeapedSimsNode> *nodes);
 };
 
 #endif
