@@ -24,8 +24,8 @@ public:
 private:
     bool _may_be_minimal(DegreeType basepoint) const;
 
-    std::vector<RelatorLengthType> _lift_indices;
-    std::vector<DegreeType> _lift_vertices;
+    RelatorLengthType *_lift_indices;
+    DegreeType *_lift_vertices;
 
 };
 

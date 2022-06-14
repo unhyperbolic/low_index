@@ -7,10 +7,10 @@ SimsNode::SimsNode(
         uint8_t * memory)
  : CoveringSubgraph(rank, max_degree, memory)
  , num_relators(num_relators)
- , _lift_indices(num_relators * max_degree, 0)
- , _lift_vertices(num_relators * max_degree, 0)
+ , _lift_indices(reinterpret_cast<RelatorLengthType*>(memory + 2 * rank * max_degree * sizeof(DegreeType)))
+ , _lift_vertices(memory + 2 * rank * max_degree * sizeof(DegreeType) + num_relators * max_degree * sizeof(RelatorLengthType))
 {
-    memset(outgoing, 0, 2 * rank * max_degree * sizeof(DegreeType));
+    memset(outgoing, 0, 2 * rank * max_degree * sizeof(DegreeType) + num_relators * max_degree * (sizeof(RelatorLengthType) + sizeof(DegreeType)));
 }
 
 SimsNode::SimsNode(
@@ -18,10 +18,10 @@ SimsNode::SimsNode(
     uint8_t * memory)
  : CoveringSubgraph(other, memory)
  , num_relators(other.num_relators)
- , _lift_indices(other._lift_indices)
- , _lift_vertices(other._lift_vertices)
+ , _lift_indices(reinterpret_cast<RelatorLengthType*>(memory + 2 * rank * max_degree * sizeof(DegreeType)))
+ , _lift_vertices(memory + 2 * rank * max_degree * sizeof(DegreeType) + num_relators * max_degree * sizeof(RelatorLengthType))
 {
-    memcpy(outgoing, other.outgoing, 2 * rank * max_degree * sizeof(DegreeType));
+    memcpy(outgoing, other.outgoing,  2 * rank * max_degree * sizeof(DegreeType) + num_relators * max_degree * (sizeof(RelatorLengthType) + sizeof(DegreeType)));
 }
 
 bool
