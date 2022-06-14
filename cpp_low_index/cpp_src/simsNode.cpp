@@ -4,11 +4,28 @@ SimsNode::SimsNode(
         const CoveringSubgraph::RankType rank,
         const CoveringSubgraph::DegreeType max_degree,
         const unsigned int num_relators)
- : CoveringSubgraph(rank, max_degree)
+ : CoveringSubgraph(rank, max_degree, new uint8_t[2 * rank * max_degree * sizeof(DegreeType)])
  , num_relators(num_relators)
  , _lift_indices(num_relators * max_degree, 0)
  , _lift_vertices(num_relators * max_degree, 0)
 {
+    memset(outgoing, 0, 2 * rank * max_degree * sizeof(DegreeType));
+}
+
+SimsNode::SimsNode(
+        const SimsNode &other)
+ : CoveringSubgraph(other, new uint8_t[2 * other.rank * other.max_degree * sizeof(DegreeType)])
+ , num_relators(other.num_relators)
+ , _lift_indices(other._lift_indices)
+ , _lift_vertices(other._lift_vertices)
+{
+    memcpy(outgoing, other.outgoing, 2 * rank * max_degree * sizeof(DegreeType));
+}
+
+SimsNode::~SimsNode()
+{
+    uint8_t * p = outgoing;
+    delete [] p;
 }
 
 bool

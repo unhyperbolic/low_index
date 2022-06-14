@@ -17,18 +17,18 @@ public:
     // Used for the letters in the group.
     using LetterType = std::make_signed<RankType>::type;
 
-    CoveringSubgraph(RankType rank,
-                     DegreeType max_degree);
+    CoveringSubgraph(
+        const CoveringSubgraph::RankType rank,
+        const CoveringSubgraph::DegreeType max_degree,
+        uint8_t * memory);
 
-    CoveringSubgraph(const CoveringSubgraph &other);
+    CoveringSubgraph(const CoveringSubgraph &other,
+                     uint8_t * memory);
 
     const RankType rank;
     DegreeType degree;
     const DegreeType max_degree;
     unsigned int num_edges;
-
-private:
-    std::unique_ptr<uint8_t[]> _memory;
 
 public:
     DegreeType *outgoing;

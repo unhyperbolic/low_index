@@ -12,6 +12,10 @@ public:
              DegreeType max_degree,
              unsigned int num_relators = 0);
 
+    SimsNode(const SimsNode &other);
+
+    ~SimsNode();
+
     const unsigned int num_relators;
 
     bool relators_lift(const std::vector<std::vector<int>> &relators) const;

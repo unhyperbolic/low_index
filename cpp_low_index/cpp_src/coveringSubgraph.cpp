@@ -5,32 +5,32 @@
 
 CoveringSubgraph::CoveringSubgraph(
         const CoveringSubgraph::RankType rank,
-        const CoveringSubgraph::DegreeType max_degree)
+        const CoveringSubgraph::DegreeType max_degree,
+        uint8_t * memory)
   : rank(rank)
   , degree(1)
   , max_degree(max_degree)
   , num_edges(0)
-  , _memory(new uint8_t[2 * rank * max_degree * sizeof(DegreeType)])
-  , outgoing(_memory.get())
-  , incoming(_memory.get() + rank * max_degree * sizeof(DegreeType))
+  , outgoing(memory)
+  , incoming(memory + rank * max_degree * sizeof(DegreeType))
   , _slot_index(0)
 {
-    memset(outgoing, 0, sizeof(DegreeType) * rank * max_degree);
-    memset(incoming, 0, sizeof(DegreeType) * rank * max_degree);
+//    memset(outgoing, 0, sizeof(DegreeType) * rank * max_degree);
+//    memset(incoming, 0, sizeof(DegreeType) * rank * max_degree);
 }
 
-CoveringSubgraph::CoveringSubgraph(const CoveringSubgraph &other)
+CoveringSubgraph::CoveringSubgraph(const CoveringSubgraph &other,
+                                   uint8_t * memory)
   : rank(other.rank)
   , degree(other.degree)
   , max_degree(other.max_degree)
   , num_edges(other.num_edges)
-  , _memory(new uint8_t[2 * rank * max_degree * sizeof(DegreeType)])
-  , outgoing(_memory.get())
-  , incoming(_memory.get() + rank * max_degree * sizeof(DegreeType))
+  , outgoing(memory)
+  , incoming(memory + other.rank * other.max_degree * sizeof(DegreeType))
   , _slot_index(other._slot_index)
 {
-    memcpy(outgoing, other.outgoing, sizeof(DegreeType) * rank * max_degree);
-    memcpy(incoming, other.incoming, sizeof(DegreeType) * rank * max_degree);
+//    memcpy(outgoing, other.outgoing, sizeof(DegreeType) * rank * max_degree);
+//    memcpy(incoming, other.incoming, sizeof(DegreeType) * rank * max_degree);
 }
 
 std::string
