@@ -24,6 +24,11 @@ public:
     size_t size;
 
 private:
+    bool _relator_may_lift(
+        const std::vector<int> &relator,
+        size_t n,
+        DegreeType v);
+
     bool _may_be_minimal(DegreeType basepoint) const;
 
     RelatorLengthType *_lift_indices;

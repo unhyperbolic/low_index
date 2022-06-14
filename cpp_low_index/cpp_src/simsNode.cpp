@@ -30,48 +30,60 @@ bool
 SimsNode::relators_may_lift(const std::vector<std::vector<int>> &relators)
 {
     for (size_t n = 0; n < relators.size(); n++) {
-        for (unsigned int v = 0; v < degree; v++) {
-            const size_t j = n * max_degree + v;
-            
-            DegreeType vertex = _lift_vertices[j];
-            if (vertex == 255) {
-                continue;
+        for (DegreeType v = 0; v < degree; v++) {
+            if (!_relator_may_lift(relators[n], n, v)) {
+                return false;
             }
-            if (vertex == 0) {
-                vertex = v + 1;
-            }
-            RelatorLengthType i;
-            RelatorLengthType index = _lift_indices[j];
-            RelatorLengthType save;
-            int label;
-            for (i = index; i < relators[n].size(); i++) {
-                label = relators[n][i];
-                save = vertex;
-                vertex = act_by(label, vertex);
-                if (vertex == 0) {
-                    _lift_vertices[j] = save;
-                    _lift_indices[j] = i;
-                    break;
-                }
-            }
+        }
+    }
+    return true;
+}
 
-            if (i >= relators[n].size() - 1) {
-                if (vertex == 0) {
-                    if (!verified_add_edge(label, save, v + 1)) {
-                        return false;
-                    }
-                    // Note that there is an "if child._is_complete(): return self.relators_may_lift(child, relators)"
-                    // in covers.pxi - which I am skipping here.
-                    // I hope that is correct.
-                    vertex = v + 1;
-                }
-                if (vertex == v + 1) {
-                    _lift_vertices[j] = 255;
-                    _lift_indices[j] = relators[n].size();
-                } else {
-                    return false;
-                }
+bool
+SimsNode::_relator_may_lift(
+    const std::vector<int> &relator,
+    const size_t n,
+    const DegreeType v)
+{
+    const size_t j = n * max_degree + v;
+
+    DegreeType vertex = _lift_vertices[j];
+    if (vertex == std::numeric_limits<DegreeType>::max()) {
+        return true;
+    }
+    if (vertex == 0) {
+        vertex = v + 1;
+    }
+    RelatorLengthType i;
+    RelatorLengthType index = _lift_indices[j];
+    RelatorLengthType save;
+    int label;
+    for (i = index; i < relator.size(); i++) {
+        label = relator[i];
+        save = vertex;
+        vertex = act_by(label, vertex);
+        if (vertex == 0) {
+            _lift_vertices[j] = save;
+            _lift_indices[j] = i;
+            break;
+        }
+    }
+
+    if (i >= relator.size() - 1) {
+        if (vertex == 0) {
+            if (!verified_add_edge(label, save, v + 1)) {
+                return false;
             }
+            // Note that there is an "if child._is_complete(): return self.relators_may_lift(child, relators)"
+            // in covers.pxi - which I am skipping here.
+            // I hope that is correct.
+            vertex = v + 1;
+        }
+        if (vertex == v + 1) {
+            _lift_vertices[j] = std::numeric_limits<DegreeType>::max();
+            _lift_indices[j] = relator.size();
+        } else {
+            return false;
         }
     }
 
