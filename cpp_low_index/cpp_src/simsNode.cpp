@@ -11,34 +11,6 @@ SimsNode::SimsNode(
 {
 }
 
-std::vector<SimsNode>
-SimsNode::get_children(const std::vector<std::vector<int>> &relators) const
-{
-    std::vector<SimsNode> children;
-    
-    const std::pair<LetterType, DegreeType> slot = first_empty_slot();
-
-    if (slot == std::pair<LetterType, DegreeType>{ 0, 0 }) {
-        return {};
-    }
-
-    const DegreeType m = std::min(static_cast<DegreeType>(degree + 1), max_degree);
-
-    for (DegreeType n = 1; n <= m; n++) {
-        if (act_by(-slot.first, n) == 0) {
-            SimsNode new_subgraph(*this);
-            new_subgraph.add_edge(slot.first, slot.second, n);
-            if (new_subgraph.relators_may_lift(relators)) {
-                if (new_subgraph.may_be_minimal()) {
-                    children.push_back(std::move(new_subgraph));
-                }
-            }
-        }
-    }
-
-    return children;
-}
-
 bool
 SimsNode::relators_may_lift(const std::vector<std::vector<int>> &relators)
 {
@@ -60,11 +32,7 @@ SimsNode::relators_may_lift(const std::vector<std::vector<int>> &relators)
             for (i = index; i < relators[n].size(); i++) {
                 label = relators[n][i];
                 save = vertex;
-                if (label > 0) {
-                    vertex = outgoing[rank * (vertex - 1) + label - 1];
-                } else {
-                    vertex = incoming[rank * (vertex - 1) - label - 1];
-                }
+                vertex = act_by(label, vertex);
                 if (vertex == 0) {
                     _lift_vertices[j] = save;
                     _lift_indices[j] = i;
