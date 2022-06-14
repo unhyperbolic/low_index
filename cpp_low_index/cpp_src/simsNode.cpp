@@ -16,40 +16,22 @@ SimsNode::get_children(const std::vector<std::vector<int>> &relators) const
 {
     std::vector<SimsNode> children;
     
-    const std::pair<int, DegreeType> slot = first_empty_slot();
+    const std::pair<LetterType, DegreeType> slot = first_empty_slot();
 
-    if (slot == std::pair<int, DegreeType>{ 0, 0 }) {
+    if (slot == std::pair<LetterType, DegreeType>{ 0, 0 }) {
         return {};
     }
 
-    std::vector<int> targets;
+    const DegreeType m = std::min(static_cast<DegreeType>(degree + 1), max_degree);
 
-    if (degree < max_degree) {
-        targets.push_back(degree + 1);
-    }
-
-    if (slot.first > 0) {
-        for (int n = 0; n < degree; n++) {
-            if (incoming[n * rank + slot.first - 1] == 0) {
-                targets.push_back(n+1);
-            }
-        }
-    } else {
-        for (int n = 0; n < degree; n++) {
-            if (outgoing[n * rank - slot.first - 1] == 0) {
-                targets.push_back(n+1);
-            }
-        }
-    }
-
-    children.reserve(targets.size());
-
-    for (const int n : targets) {
-        SimsNode new_subgraph(*this);
-        new_subgraph.add_edge(slot.first, slot.second, n);
-        if (new_subgraph.relators_may_lift(relators)) {
-            if (new_subgraph.may_be_minimal()) {
-                children.push_back(std::move(new_subgraph));
+    for (DegreeType n = 1; n <= m; n++) {
+        if (act_by(-slot.first, n) == 0) {
+            SimsNode new_subgraph(*this);
+            new_subgraph.add_edge(slot.first, slot.second, n);
+            if (new_subgraph.relators_may_lift(relators)) {
+                if (new_subgraph.may_be_minimal()) {
+                    children.push_back(std::move(new_subgraph));
+                }
             }
         }
     }
