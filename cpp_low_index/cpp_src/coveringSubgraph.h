@@ -9,21 +9,21 @@
 class CoveringSubgraph
 {
 public:
-    // Used for degree and cover and also as index for
-    // the vertices of the cover.
+    // Index for vertices and degree of cover.
     using DegreeType = uint8_t;
-    // Used for the rank of the group.
+    // Rank of the group.
     using RankType = uint16_t;
-    // Used for the letters in the group.
+    // Letters in the group, used to label edges.
     using LetterType = std::make_signed<RankType>::type;
 
     CoveringSubgraph(
-        const CoveringSubgraph::RankType rank,
-        const CoveringSubgraph::DegreeType max_degree,
+        RankType rank,
+        DegreeType max_degree,
         uint8_t * memory);
 
-    CoveringSubgraph(const CoveringSubgraph &other,
-                     uint8_t * memory);
+    CoveringSubgraph(
+        const CoveringSubgraph &other,
+        uint8_t * memory);
 
     const RankType rank;
     DegreeType degree;

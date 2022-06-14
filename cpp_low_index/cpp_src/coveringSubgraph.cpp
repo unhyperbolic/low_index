@@ -4,9 +4,9 @@
 #include <cstdlib>
 
 CoveringSubgraph::CoveringSubgraph(
-        const CoveringSubgraph::RankType rank,
-        const CoveringSubgraph::DegreeType max_degree,
-        uint8_t * memory)
+        const RankType rank,
+        const DegreeType max_degree,
+        uint8_t * const memory)
   : rank(rank)
   , degree(1)
   , max_degree(max_degree)
@@ -15,12 +15,10 @@ CoveringSubgraph::CoveringSubgraph(
   , incoming(memory + rank * max_degree * sizeof(DegreeType))
   , _slot_index(0)
 {
-//    memset(outgoing, 0, sizeof(DegreeType) * rank * max_degree);
-//    memset(incoming, 0, sizeof(DegreeType) * rank * max_degree);
 }
 
 CoveringSubgraph::CoveringSubgraph(const CoveringSubgraph &other,
-                                   uint8_t * memory)
+                                   uint8_t * const memory)
   : rank(other.rank)
   , degree(other.degree)
   , max_degree(other.max_degree)
@@ -29,8 +27,6 @@ CoveringSubgraph::CoveringSubgraph(const CoveringSubgraph &other,
   , incoming(memory + other.rank * other.max_degree * sizeof(DegreeType))
   , _slot_index(other._slot_index)
 {
-//    memcpy(outgoing, other.outgoing, sizeof(DegreeType) * rank * max_degree);
-//    memcpy(incoming, other.incoming, sizeof(DegreeType) * rank * max_degree);
 }
 
 std::string
