@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <memory>
 
 class CoveringSubgraph
 {
@@ -21,12 +22,15 @@ public:
 
     CoveringSubgraph(const CoveringSubgraph &other);
 
-    ~CoveringSubgraph();
-    
     const RankType rank;
     DegreeType degree;
     const DegreeType max_degree;
     unsigned int num_edges;
+
+private:
+    std::unique_ptr<uint8_t[]> _memory;
+
+public:
     DegreeType *outgoing;
     DegreeType *incoming;
 
@@ -48,7 +52,7 @@ public:
 protected:
     mutable int _slot_index;
 
-private:
+    
     template<bool check>
     bool _add_edge(LetterType label, DegreeType from_vertex, DegreeType to_vertex);
 };

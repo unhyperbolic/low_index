@@ -10,8 +10,9 @@ CoveringSubgraph::CoveringSubgraph(
   , degree(1)
   , max_degree(max_degree)
   , num_edges(0)
-  , outgoing(new DegreeType[rank * max_degree])
-  , incoming(new DegreeType[rank * max_degree])
+  , _memory(new uint8_t[2 * rank * max_degree * sizeof(DegreeType)])
+  , outgoing(_memory.get())
+  , incoming(_memory.get() + rank * max_degree * sizeof(DegreeType))
   , _slot_index(0)
 {
     memset(outgoing, 0, sizeof(DegreeType) * rank * max_degree);
@@ -23,18 +24,13 @@ CoveringSubgraph::CoveringSubgraph(const CoveringSubgraph &other)
   , degree(other.degree)
   , max_degree(other.max_degree)
   , num_edges(other.num_edges)
-  , outgoing(new DegreeType[rank * max_degree])
-  , incoming(new DegreeType[rank * max_degree])
+  , _memory(new uint8_t[2 * rank * max_degree * sizeof(DegreeType)])
+  , outgoing(_memory.get())
+  , incoming(_memory.get() + rank * max_degree * sizeof(DegreeType))
   , _slot_index(other._slot_index)
 {
     memcpy(outgoing, other.outgoing, sizeof(DegreeType) * rank * max_degree);
     memcpy(incoming, other.incoming, sizeof(DegreeType) * rank * max_degree);
-}
-
-CoveringSubgraph::~CoveringSubgraph()
-{
-    delete []outgoing;
-    delete []incoming;
 }
 
 std::string
