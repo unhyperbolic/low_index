@@ -41,6 +41,8 @@ protected:
 
     void _ApplyMemoryLayout(const _MemoryLayout &layout,
                             uint8_t * memory);
+    void _InitializeMemory();
+    void _CopyMemory(const SimsNode &other);
 
     bool _relator_may_lift(
         const std::vector<int> &relator,

@@ -11,8 +11,6 @@ CoveringSubgraph::CoveringSubgraph(
   , degree(1)
   , max_degree(max_degree)
   , num_edges(0)
-  , outgoing(memory)
-  , incoming(memory + rank * max_degree * sizeof(DegreeType))
   , _slot_index(0)
 {
 }
@@ -23,8 +21,6 @@ CoveringSubgraph::CoveringSubgraph(const CoveringSubgraph &other,
   , degree(other.degree)
   , max_degree(other.max_degree)
   , num_edges(other.num_edges)
-  , outgoing(memory)
-  , incoming(memory + other.rank * other.max_degree * sizeof(DegreeType))
   , _slot_index(other._slot_index)
 {
 }
