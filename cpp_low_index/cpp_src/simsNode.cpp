@@ -29,7 +29,7 @@ SimsNode::_MemoryLayout::_MemoryLayout(
 
     // DegreeType *lift_vertices;
     t = _Align<DegreeType>(t);
-    lift_vertices = t;
+    lift_vertices_offset = t;
     t += num_relators * max_degree * sizeof(DegreeType);
     
     size = _Align<uint64_t>(t);
