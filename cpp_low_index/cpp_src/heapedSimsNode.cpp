@@ -3,7 +3,7 @@
 void
 HeapedSimsNode::_AllocateMemory()
 {
-    const _MemoryLayout layout(rank, max_degree, num_relators);
+    const _MemoryLayout layout(*this);
     _memory = std::make_unique<uint8_t[]>(layout.size);
     _ApplyMemoryLayout(layout, _memory.get());
 }

@@ -30,9 +30,8 @@ private:
 protected:
     struct _MemoryLayout
     {
-        _MemoryLayout(RankType rank,
-                      DegreeType max_degree,
-                      unsigned int num_relators);
+        _MemoryLayout(const SimsNode &node);
+
         static constexpr size_t outgoing_offset = 0;
         size_t incoming_offset;
         size_t lift_indices_offset;

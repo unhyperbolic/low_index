@@ -9,28 +9,26 @@ _Align(const size_t n)
 }
 
 SimsNode::_MemoryLayout::_MemoryLayout(
-    const RankType rank,
-    const DegreeType max_degree,
-    const unsigned int num_relators)
+    const SimsNode &node)
 {
     // DegreeType *outgoing;
     size_t t = outgoing_offset;
-    t += rank * max_degree * sizeof(DegreeType);
+    t += node.rank * node.max_degree * sizeof(DegreeType);
 
     // DegreeType *incoming;
     t = _Align<DegreeType>(t);
     incoming_offset = t;
-    t += rank * max_degree * sizeof(DegreeType);
+    t += node.rank * node.max_degree * sizeof(DegreeType);
 
     // RelatorLengthType *lift_indices;
     t = _Align<RelatorLengthType>(t);
     lift_indices_offset = t;
-    t += num_relators * max_degree * sizeof(RelatorLengthType);
+    t += node.num_relators * node.max_degree * sizeof(RelatorLengthType);
 
     // DegreeType *lift_vertices;
     t = _Align<DegreeType>(t);
     lift_vertices_offset = t;
-    t += num_relators * max_degree * sizeof(DegreeType);
+    t += node.num_relators * node.max_degree * sizeof(DegreeType);
     
     size = _Align<uint64_t>(t);
 }

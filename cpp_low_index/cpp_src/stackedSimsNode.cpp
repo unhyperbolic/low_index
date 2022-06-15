@@ -24,7 +24,7 @@ StackedSimsNode::StackedSimsNode(
     uint8_t * const memory)
  : SimsNode(other)
 {
-    const _MemoryLayout layout(rank, max_degree, num_relators);
+    const _MemoryLayout layout(other);
     _ApplyMemoryLayout(layout, memory);
     _CopyMemory(other);
 }
