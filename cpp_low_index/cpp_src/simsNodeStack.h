@@ -15,6 +15,8 @@ public:
     };
 
 private:
+    static size_t _ComputeMemorySize(const SimsNode &node);
+    
     std::unique_ptr<uint8_t[]> _memory;
     StackedSimsNode _node;
 };

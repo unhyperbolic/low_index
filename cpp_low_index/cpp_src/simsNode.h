@@ -24,9 +24,6 @@ public:
 
     size_t size;
 
-private:
-    friend class SimsNodeStack;
-
 protected:
     struct _MemoryLayout
     {
