@@ -16,15 +16,15 @@ public:
     // Letters in the group, used to label edges.
     using LetterType = std::make_signed<RankType>::type;
 
+protected:
     CoveringSubgraph(
         RankType rank,
-        DegreeType max_degree,
-        uint8_t * memory);
+        DegreeType max_degree);
 
     CoveringSubgraph(
-        const CoveringSubgraph &other,
-        uint8_t * memory);
+        const CoveringSubgraph &other);
 
+public:
     const RankType rank;
     DegreeType degree;
     const DegreeType max_degree;

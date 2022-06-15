@@ -69,17 +69,15 @@ SimsNode::_CopyMemory(const SimsNode &other)
 SimsNode::SimsNode(
         const CoveringSubgraph::RankType rank,
         const CoveringSubgraph::DegreeType max_degree,
-        const unsigned int num_relators,
-        uint8_t * memory)
- : CoveringSubgraph(rank, max_degree, memory)
+        const unsigned int num_relators)
+ : CoveringSubgraph(rank, max_degree)
  , num_relators(num_relators)
 {
 }
 
 SimsNode::SimsNode(
-    const SimsNode &other,
-    uint8_t * memory)
- : CoveringSubgraph(other, memory)
+    const SimsNode &other)
+ : CoveringSubgraph(other)
  , num_relators(other.num_relators)
 {
 }

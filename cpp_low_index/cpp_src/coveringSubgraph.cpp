@@ -5,8 +5,7 @@
 
 CoveringSubgraph::CoveringSubgraph(
         const RankType rank,
-        const DegreeType max_degree,
-        uint8_t * const memory)
+        const DegreeType max_degree)
   : rank(rank)
   , degree(1)
   , max_degree(max_degree)
@@ -15,8 +14,7 @@ CoveringSubgraph::CoveringSubgraph(
 {
 }
 
-CoveringSubgraph::CoveringSubgraph(const CoveringSubgraph &other,
-                                   uint8_t * const memory)
+CoveringSubgraph::CoveringSubgraph(const CoveringSubgraph &other)
   : rank(other.rank)
   , degree(other.degree)
   , max_degree(other.max_degree)

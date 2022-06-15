@@ -8,13 +8,14 @@ class SimsNode : public CoveringSubgraph
 public:
     using RelatorLengthType = uint16_t;
 
+protected:
     SimsNode(RankType rank,
              DegreeType max_degree,
-             unsigned int num_relators,
-             uint8_t * memory);
+             unsigned int num_relators);
 
-    SimsNode(const SimsNode &other, uint8_t * memory);
+    SimsNode(const SimsNode &other);
 
+public:
     const unsigned int num_relators;
 
     bool relators_lift(const std::vector<std::vector<int>> &relators) const;

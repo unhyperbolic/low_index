@@ -25,7 +25,7 @@ public:
 
     HeapedSimsNode(const HeapedSimsNode &other)
       : HeapStorage(2 * other.rank * other.max_degree * sizeof(DegreeType) + other.num_relators * other.max_degree * (sizeof(RelatorLengthType) + sizeof(DegreeType)))
-      , SimsNode(other, _get_mem())
+      , SimsNode(other)
     {
         _ApplyMemoryLayout(_MemoryLayout(rank, max_degree, num_relators), _get_mem());
         _CopyMemory(other);
@@ -33,7 +33,7 @@ public:
 
     HeapedSimsNode(const SimsNode &other)
       : HeapStorage(2 * other.rank * other.max_degree * sizeof(DegreeType) + other.num_relators * other.max_degree * (sizeof(RelatorLengthType) + sizeof(DegreeType)))
-      , SimsNode(other, _get_mem())
+      , SimsNode(other)
     {
         _ApplyMemoryLayout(_MemoryLayout(rank, max_degree, num_relators), _get_mem());
         _CopyMemory(other);

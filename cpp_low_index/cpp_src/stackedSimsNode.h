@@ -7,7 +7,7 @@ class StackedSimsNode : public SimsNode
 {
 public:
     StackedSimsNode(const SimsNode &other, uint8_t * memory)
-     : SimsNode(other, memory)
+     : SimsNode(other)
     {
         _ApplyMemoryLayout(
             _MemoryLayout(
