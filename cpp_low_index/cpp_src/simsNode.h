@@ -32,10 +32,10 @@ private:
                       DegreeType max_degree,
                       unsigned int num_relators);
         static constexpr size_t outgoing_offset = 0;
-        const size_t incoming_offset;
-        const size_t lift_indices_offset;
-        const size_t lift_vertices_offset;
-        const size_t size;
+        size_t incoming_offset;
+        size_t lift_indices_offset;
+        size_t lift_vertices_offset;
+        size_t size;
     };
     
     bool _relator_may_lift(
