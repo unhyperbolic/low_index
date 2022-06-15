@@ -1,5 +1,5 @@
-#ifndef _SIMS_NODE_H
-#define _SIMS_NODE_H
+#ifndef _SIMS_NODE_H_
+#define _SIMS_NODE_H_
 
 #include "coveringSubgraph.h"
 
@@ -24,6 +24,20 @@ public:
     size_t size;
 
 private:
+    friend class SimsNodeStack;
+
+    struct _MemoryLayout
+    {
+        _MemoryLayout(RankType rank,
+                      DegreeType max_degree,
+                      unsigned int num_relators);
+        static constexpr size_t outgoing_offset = 0;
+        const size_t incoming_offset;
+        const size_t lift_indices_offset;
+        const size_t lift_vertices_offset;
+        const size_t size;
+    };
+    
     bool _relator_may_lift(
         const std::vector<int> &relator,
         size_t n,

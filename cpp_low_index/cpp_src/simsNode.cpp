@@ -1,5 +1,36 @@
 #include "simsNode.h"
 
+template<typename T>
+static
+size_t
+_Align(const size_t n)
+{
+    return ((n + alignof(T) - 1 ) / alignof(T)) * alignof(T);
+}
+
+SimsNode::_MemoryLayout::_MemoryLayout(
+    const RankType rank,
+    const DegreeType max_degree,
+    const unsigned int num_relators)
+ : incoming_offset(
+     _Align<DegreeType>(
+         outgoing_offset +
+         rank * max_degree * sizeof(DegreeType)))
+ , lift_indices_offset(
+     _Align<RelatorLengthType>(
+         incoming_offset +
+         rank * max_degree * sizeof(DegreeType)))
+ , lift_vertices_offset(
+     _Align<DegreeType>(
+         lift_indices_offset +
+         num_relators * max_degree * sizeof(RelatorLengthType)))
+ , size(
+     _Align<uint64_t>(
+         lift_vertices_offset +
+         num_relators * max_degree * sizeof(DegreeType)))
+{
+}
+
 SimsNode::SimsNode(
         const CoveringSubgraph::RankType rank,
         const CoveringSubgraph::DegreeType max_degree,
