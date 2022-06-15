@@ -13,6 +13,7 @@ ext_modules = [
         [
             "cpp_src/coveringSubgraph.cpp",
             "cpp_src/heapedSimsNode.cpp",
+            "cpp_src/stackedSimsNode.cpp",
             "cpp_src/simsNode.cpp",
             "cpp_src/simsTree.cpp",
             "cpp_src/wrapCoveringSubgraph.cpp",

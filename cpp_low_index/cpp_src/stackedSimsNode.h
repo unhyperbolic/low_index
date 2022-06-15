@@ -16,15 +16,7 @@ public:
         _CopyMemory(other);
     }
 
-    StackedSimsNode(const StackedSimsNode &other)
-     : SimsNode(other, reinterpret_cast<uint8_t*>(other.outgoing) + other.size)
-    {
-        _ApplyMemoryLayout(
-            _MemoryLayout(
-                other.rank, other.max_degree, other.num_relators),
-            reinterpret_cast<uint8_t*>(other.outgoing) + other.size);
-        _CopyMemory(other);
-    }
+    StackedSimsNode(const StackedSimsNode &other);
 };
 
 #endif
