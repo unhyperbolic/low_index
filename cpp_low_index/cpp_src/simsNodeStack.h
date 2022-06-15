@@ -15,6 +15,8 @@ public:
     };
 
 private:
+    void * operator new(size_t size) = delete;
+    
     static size_t _ComputeMemorySize(const SimsNode &node);
     
     std::unique_ptr<uint8_t[]> _memory;

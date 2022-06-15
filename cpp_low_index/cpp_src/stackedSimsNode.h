@@ -9,6 +9,8 @@ public:
     StackedSimsNode(const StackedSimsNode &other);
 
 private:
+    void * operator new(size_t size) = delete;
+
     friend class SimsNodeStack;
     StackedSimsNode(const SimsNode &other, uint8_t * memory);
 };
