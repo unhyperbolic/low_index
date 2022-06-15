@@ -12,6 +12,7 @@ ext_modules = [
     Pybind11Extension("cpp_low_index",
         [
             "cpp_src/coveringSubgraph.cpp",
+            "cpp_src/heapedSimsNode.cpp",
             "cpp_src/simsNode.cpp",
             "cpp_src/simsTree.cpp",
             "cpp_src/wrapCoveringSubgraph.cpp",

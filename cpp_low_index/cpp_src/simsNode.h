@@ -26,6 +26,7 @@ public:
 private:
     friend class SimsNodeStack;
 
+protected:
     struct _MemoryLayout
     {
         _MemoryLayout(RankType rank,

@@ -25,6 +25,9 @@ public:
       : HeapStorage(2 * rank * max_degree * sizeof(DegreeType) + num_relators * max_degree * (sizeof(RelatorLengthType) + sizeof(DegreeType)))
       , SimsNode(rank, max_degree, num_relators, _get_mem())
     {
+        const _MemoryLayout layout(rank, max_degree, num_relators);
+        outgoing = _get_mem() + layout.outgoing_offset;
+        
     }
 
     HeapedSimsNode(const HeapedSimsNode &other)
