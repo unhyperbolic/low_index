@@ -35,6 +35,25 @@ SimsNode::_MemoryLayout::_MemoryLayout(
     size = _Align<uint64_t>(t);
 }
 
+void
+SimsNode::_ApplyMemoryLayout(const _MemoryLayout &layout,
+                             uint8_t * const memory)
+{
+    outgoing =
+        reinterpret_cast<DegreeType*>(
+            memory + layout.outgoing_offset);
+    incoming =
+        reinterpret_cast<DegreeType*>(
+            memory + layout.incoming_offset);
+    _lift_indices =
+        reinterpret_cast<RelatorLengthType*>(
+            memory + layout.lift_indices_offset);
+    _lift_vertices =
+        reinterpret_cast<DegreeType*>(
+            memory + layout.lift_vertices_offset);
+    size = layout.size;
+}
+
 SimsNode::SimsNode(
         const CoveringSubgraph::RankType rank,
         const CoveringSubgraph::DegreeType max_degree,

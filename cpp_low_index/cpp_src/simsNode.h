@@ -38,7 +38,10 @@ protected:
         size_t lift_vertices_offset;
         size_t size;
     };
-    
+
+    void _ApplyMemoryLayout(const _MemoryLayout &layout,
+                            uint8_t * memory);
+
     bool _relator_may_lift(
         const std::vector<int> &relator,
         size_t n,
