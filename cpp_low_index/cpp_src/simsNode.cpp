@@ -34,8 +34,9 @@ SimsNode::_MemoryLayout::_MemoryLayout(
 }
 
 void
-SimsNode::_ApplyMemoryLayout(const _MemoryLayout &layout,
-                             uint8_t * const memory)
+SimsNode::_ApplyMemoryLayout(
+    const _MemoryLayout &layout,
+    uint8_t * const memory)
 {
     outgoing =
         reinterpret_cast<DegreeType*>(
