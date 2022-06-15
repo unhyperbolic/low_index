@@ -6,17 +6,11 @@
 class StackedSimsNode : public SimsNode
 {
 public:
-    StackedSimsNode(const SimsNode &other, uint8_t * memory)
-     : SimsNode(other)
-    {
-        _ApplyMemoryLayout(
-            _MemoryLayout(
-                other.rank, other.max_degree, other.num_relators),
-            memory);
-        _CopyMemory(other);
-    }
-
     StackedSimsNode(const StackedSimsNode &other);
+
+private:
+    friend class SimsNodeStack;
+    StackedSimsNode(const SimsNode &other, uint8_t * memory);
 };
 
 #endif

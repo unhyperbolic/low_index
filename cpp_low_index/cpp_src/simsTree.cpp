@@ -2,6 +2,7 @@
 
 #include "simsTree.h"
 #include "stackedSimsNode.h"
+#include "simsNodeStack.h"
 
 SimsTree::SimsTree(
     const HeapedSimsNode &root,
@@ -30,11 +31,9 @@ SimsTree::list()
 {
     std::vector<HeapedSimsNode> nodes;
 
-    std::unique_ptr<uint8_t[]> memory(new uint8_t[10000000]);
-
-    StackedSimsNode stackedRoot(root, memory.get());
+    SimsNodeStack stack(root);
     
-    _recurse(stackedRoot, &nodes);
+    _recurse(stack.GetNode(), &nodes);
 
     return nodes;
 }
