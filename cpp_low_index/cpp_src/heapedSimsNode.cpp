@@ -1,12 +1,35 @@
 #include "heapedSimsNode.h"
 
-HeapedSimsNode::HeapedSimsNode(RankType rank,
-                   DegreeType max_degree,
-                   unsigned int num_relators)
-      : HeapStorage(2 * rank * max_degree * sizeof(DegreeType) + num_relators * max_degree * (sizeof(RelatorLengthType) + sizeof(DegreeType)))
-      , SimsNode(rank, max_degree, num_relators)
+void
+HeapedSimsNode::_AllocateMemory()
 {
-    _ApplyMemoryLayout(_MemoryLayout(rank, max_degree, num_relators), _get_mem());
+    const _MemoryLayout layout(rank, max_degree, num_relators);
+    _memory = std::make_unique<uint8_t[]>(layout.size);
+    _ApplyMemoryLayout(layout, _memory.get());
+}
+
+HeapedSimsNode::HeapedSimsNode(
+    const RankType rank,
+    const DegreeType max_degree,
+    const unsigned int num_relators)
+ : SimsNode(rank, max_degree, num_relators)
+{
+    _AllocateMemory();
     _InitializeMemory();
 }
 
+HeapedSimsNode::HeapedSimsNode(
+    const SimsNode &other)
+ : SimsNode(other)
+{
+    _AllocateMemory();
+    _CopyMemory(other);
+}
+
+HeapedSimsNode::HeapedSimsNode(
+    const HeapedSimsNode &other)
+ : SimsNode(other)
+{
+    _AllocateMemory();
+    _CopyMemory(other);
+}
