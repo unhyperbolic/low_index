@@ -7,8 +7,8 @@ CoveringSubgraph::CoveringSubgraph(
         const RankType rank,
         const DegreeType max_degree)
   : _rank(rank)
-  , _degree(1)
   , _max_degree(max_degree)
+  , _degree(1)
   , _num_edges(0)
   , _slot_index(0)
 {
@@ -16,8 +16,8 @@ CoveringSubgraph::CoveringSubgraph(
 
 CoveringSubgraph::CoveringSubgraph(const CoveringSubgraph &other)
   : _rank(other._rank)
-  , _degree(other._degree)
   , _max_degree(other._max_degree)
+  , _degree(other._degree)
   , _num_edges(other._num_edges)
   , _slot_index(other._slot_index)
 {
@@ -43,8 +43,8 @@ CoveringSubgraph::to_string() const
     for (DegreeType v = 0; v < _degree; v++) {
         for (RankType n = 0; n < _rank; n++) {
             const size_t j = v * _rank + n;
-            const DegreeType t = outgoing[j];
-            const DegreeType s = incoming[j];
+            const DegreeType t = _outgoing[j];
+            const DegreeType s = _incoming[j];
 
             if (t != 0 || s != 0) {
                 result += "\n" + padding;
@@ -86,7 +86,7 @@ CoveringSubgraph::permutation_rep() const
         std::vector<int> &r = result.back();
         r.reserve(_degree);
         for (DegreeType v = 0; v < _degree; v++) {
-            r.push_back(outgoing[v * _rank + l] - 1);
+            r.push_back(_outgoing[v * _rank + l] - 1);
         }
     }
             
@@ -136,7 +136,7 @@ CoveringSubgraph::_add_edge(
     const unsigned int out_index = (from_vertex - 1) * _rank + (label - 1);
     const unsigned int in_index  = (to_vertex   - 1) * _rank + (label - 1);
     if (check) {
-        if (outgoing[out_index] != 0 || incoming[in_index] != 0) {
+        if (_outgoing[out_index] != 0 || _incoming[in_index] != 0) {
             return false;
         }
     }
@@ -150,8 +150,8 @@ CoveringSubgraph::_add_edge(
     }
     */
     
-    outgoing[out_index] = to_vertex;
-    incoming[in_index]  = from_vertex;
+    _outgoing[out_index] = to_vertex;
+    _incoming[in_index]  = from_vertex;
     _num_edges++;
     return true;
 }
@@ -160,9 +160,9 @@ CoveringSubgraph::DegreeType
 CoveringSubgraph::act_by(const LetterType letter, const DegreeType vertex) const
 {
     if (letter > 0) {
-        return outgoing[(vertex - 1) * _rank + letter - 1];
+        return _outgoing[(vertex - 1) * _rank + letter - 1];
     } else {
-        return incoming[(vertex - 1) * _rank - letter - 1];
+        return _incoming[(vertex - 1) * _rank - letter - 1];
     }
 }
 
@@ -176,13 +176,13 @@ CoveringSubgraph::first_empty_slot() const
     }
 
     for(unsigned int n = _slot_index; n < max_edges; n++) {
-        if (outgoing[n] == 0) {
+        if (_outgoing[n] == 0) {
             const std::div_t qr = std::div(
                 static_cast<int>(n), static_cast<int>(_rank));
             _slot_index = n;
             return { qr.rem + 1, qr.quot + 1 };
         }
-        if (incoming[n] == 0) {
+        if (_incoming[n] == 0) {
             const std::div_t qr = std::div(
                 static_cast<int>(n), static_cast<int>(_rank));
             _slot_index = n;

@@ -48,20 +48,25 @@ protected:
     CoveringSubgraph(
         const CoveringSubgraph &other);
 
+    uint8_t * _memory_start() const {
+        return _outgoing;
+    }
+    
 private:
     template<bool check>
     bool _add_edge(LetterType label, DegreeType from_vertex, DegreeType to_vertex);
 
     const RankType _rank;
-    DegreeType _degree;
     const DegreeType _max_degree;
-    unsigned int _num_edges;
 
-public:
-    DegreeType *outgoing;
-    DegreeType *incoming;
+protected:
+    DegreeType *_outgoing;
+    DegreeType *_incoming;
 
 private:
+    DegreeType _degree;
+    unsigned int _num_edges;
+
     mutable int _slot_index;
 };
 

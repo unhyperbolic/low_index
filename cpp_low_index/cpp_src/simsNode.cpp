@@ -54,10 +54,10 @@ SimsNode::_apply_memory_layout(
     const _MemoryLayout &layout,
     uint8_t * const memory)
 {
-    outgoing =
+    _outgoing =
         reinterpret_cast<DegreeType*>(
             memory + layout.outgoing_offset);
-    incoming =
+    _incoming =
         reinterpret_cast<DegreeType*>(
             memory + layout.incoming_offset);
     _lift_indices =
@@ -72,7 +72,7 @@ SimsNode::_apply_memory_layout(
 void
 SimsNode::_initialize_memory()
 {
-    memset(outgoing, 0, size);
+    memset(_memory_start(), 0, size);
     for (size_t n = 0; n < num_relators; n++) {
         for (DegreeType v = 0; v < max_degree(); v++) {
             const size_t j = n * max_degree() + v;
@@ -84,7 +84,7 @@ SimsNode::_initialize_memory()
 void
 SimsNode::_copy_memory(const SimsNode &other)
 {
-    memcpy(outgoing, other.outgoing, size);
+    memcpy(_memory_start(), other._memory_start(), size);
 }
 
 bool
@@ -196,7 +196,7 @@ SimsNode::_may_be_minimal(const DegreeType basepoint) const
 
     for (DegreeType slot_vertex = 1; slot_vertex <= degree(); slot_vertex++) {
         for (RankType l = 0; l < rank(); l++) {
-            for (const DegreeType * const edges : { outgoing, incoming }) {
+            for (const DegreeType * const edges : { _outgoing, _incoming }) {
                 const DegreeType a = edges[
                     (slot_vertex - 1) * rank() + l];
                 const DegreeType b = edges[
