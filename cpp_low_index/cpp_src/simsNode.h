@@ -8,12 +8,13 @@ class SimsNode : public CoveringSubgraph
 public:
     using RelatorLengthType = uint16_t;
 
+    // Name new_relators_lift to make clear that relators_may_lift always
+    // has to be called with the same relators?
     bool relators_lift(const std::vector<std::vector<int>> &relators) const;
     bool relators_may_lift(const std::vector<std::vector<int>> &relators);
     bool may_be_minimal() const;
-    const unsigned int num_relators;
 
-    size_t size;
+    unsigned int num_relators() const { return _num_relators; }
 
 protected:
     SimsNode(RankType rank,
@@ -38,6 +39,7 @@ protected:
     void _initialize_memory();
     void _copy_memory(const SimsNode &other);
 
+private:
     bool _relator_may_lift(
         const std::vector<int> &relator,
         size_t n,
@@ -45,6 +47,10 @@ protected:
 
     bool _may_be_minimal(DegreeType basepoint) const;
 
+    const unsigned int _num_relators;
+
+public:
+    size_t _memory_size;
     RelatorLengthType *_lift_indices;
     DegreeType *_lift_vertices;
 };

@@ -5,14 +5,14 @@ SimsNode::SimsNode(
         const CoveringSubgraph::DegreeType max_degree,
         const unsigned int num_relators)
  : CoveringSubgraph(rank, max_degree)
- , num_relators(num_relators)
+ , _num_relators(num_relators)
 {
 }
 
 SimsNode::SimsNode(
     const SimsNode &other)
  : CoveringSubgraph(other)
- , num_relators(other.num_relators)
+ , _num_relators(other._num_relators)
 {
 }
 
@@ -39,12 +39,12 @@ SimsNode::_MemoryLayout::_MemoryLayout(
     // RelatorLengthType *lift_indices;
     t = _align<RelatorLengthType>(t);
     lift_indices_offset = t;
-    t += node.num_relators * node.max_degree() * sizeof(RelatorLengthType);
+    t += node.num_relators() * node.max_degree() * sizeof(RelatorLengthType);
 
     // DegreeType *lift_vertices;
     t = _align<DegreeType>(t);
     lift_vertices_offset = t;
-    t += node.num_relators * node.max_degree() * sizeof(DegreeType);
+    t += node.num_relators() * node.max_degree() * sizeof(DegreeType);
     
     size = _align<uint64_t>(t);
 }
@@ -66,14 +66,14 @@ SimsNode::_apply_memory_layout(
     _lift_vertices =
         reinterpret_cast<DegreeType*>(
             memory + layout.lift_vertices_offset);
-    size = layout.size;
+    _memory_size = layout.size;
 }
 
 void
 SimsNode::_initialize_memory()
 {
-    memset(_memory_start(), 0, size);
-    for (size_t n = 0; n < num_relators; n++) {
+    memset(_memory_start(), 0, _memory_size);
+    for (size_t n = 0; n < _num_relators; n++) {
         for (DegreeType v = 0; v < max_degree(); v++) {
             const size_t j = n * max_degree() + v;
             _lift_vertices[j] = v + 1;
@@ -84,7 +84,7 @@ SimsNode::_initialize_memory()
 void
 SimsNode::_copy_memory(const SimsNode &other)
 {
-    memcpy(_memory_start(), other._memory_start(), size);
+    memcpy(_memory_start(), other._memory_start(), _memory_size);
 }
 
 bool

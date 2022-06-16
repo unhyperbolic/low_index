@@ -10,11 +10,11 @@ T* _move_pointer(T* const p, const size_t n)
 StackedSimsNode::StackedSimsNode(const StackedSimsNode &other)
   : SimsNode(other)
 {
-    _outgoing = _move_pointer(other._outgoing, other.size);
-    _incoming = _move_pointer(other._incoming, other.size);
-    _lift_indices = _move_pointer(other._lift_indices, other.size);
-    _lift_vertices = _move_pointer(other._lift_vertices, other.size);
-    size = other.size;
+    _outgoing = _move_pointer(other._outgoing, other._memory_size);
+    _incoming = _move_pointer(other._incoming, other._memory_size);
+    _lift_indices = _move_pointer(other._lift_indices, other._memory_size);
+    _lift_vertices = _move_pointer(other._lift_vertices, other._memory_size);
+    _memory_size = other._memory_size;
 
     _copy_memory(other);
 }
