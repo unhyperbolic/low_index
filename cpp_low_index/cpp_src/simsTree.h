@@ -18,7 +18,7 @@ public:
 
     std::vector<HeapedSimsNode> list(
         size_t bloom_size,
-        unsigned int thread_num);
+        unsigned int thread_num) const;
 
 private:
     SimsTree(
@@ -26,24 +26,23 @@ private:
         const std::vector<std::vector<int>> &short_relators,
         const std::vector<std::vector<int>> &long_relators);
 
-    void _recurse(const StackedSimsNode &n, std::vector<HeapedSimsNode> *nodes);
-    std::vector<HeapedSimsNode> _bloom(size_t n);
+    void _recurse(
+        const StackedSimsNode &n,
+        std::vector<HeapedSimsNode> *nodes) const;
+    std::vector<HeapedSimsNode> _bloom(size_t n) const;
 
-    std::vector<HeapedSimsNode> _list_single_threaded();
+    std::vector<HeapedSimsNode> _list_single_threaded() const;
     std::vector<HeapedSimsNode> _list_multi_threaded(
-        size_t bloom_size, unsigned int thread_num);
+        size_t bloom_size, unsigned int thread_num) const;
 
-    std::vector<HeapedSimsNode> _threaded(
-        const std::vector<HeapedSimsNode> &nodes,
-        unsigned int thread_num);
-    void _thread(const std::vector<HeapedSimsNode> &nodes,
-                 std::vector<std::vector<HeapedSimsNode>> * result);
+    void _thread_worker(
+        const std::vector<HeapedSimsNode> &branches,
+        std::atomic_size_t * index,
+        std::vector<std::vector<HeapedSimsNode>> * nested_result) const;
     
     const std::vector<std::vector<int>> _short_relators;
     const std::vector<std::vector<int>> _long_relators;
     const HeapedSimsNode _root;
-
-    std::atomic_size_t _index;
 };
 
 #endif

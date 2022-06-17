@@ -1,12 +1,10 @@
-#include <iostream>
-
 #include "simsTree.h"
 #include "stackedSimsNode.h"
 #include "simsNodeStack.h"
-#include "stackedSimsNode.h"
 
 #include <list>
 #include <thread>
+#include <atomic>
 
 SimsTree::SimsTree(
     const HeapedSimsNode &root,
@@ -31,7 +29,9 @@ SimsTree::SimsTree(
 }
 
 void
-SimsTree::_recurse(const StackedSimsNode &n, std::vector<HeapedSimsNode> *nodes)
+SimsTree::_recurse(
+    const StackedSimsNode &n,
+    std::vector<HeapedSimsNode> *nodes) const
 {
     if(n.is_complete()) {
         if (n.relators_lift(_long_relators)) {
@@ -60,7 +60,7 @@ SimsTree::_recurse(const StackedSimsNode &n, std::vector<HeapedSimsNode> *nodes)
 }
 
 std::vector<HeapedSimsNode>
-SimsTree::_bloom(const size_t n)
+SimsTree::_bloom(const size_t n) const
 {
     std::list<HeapedSimsNode> r = { _root };
 
@@ -111,7 +111,7 @@ SimsTree::_bloom(const size_t n)
 std::vector<HeapedSimsNode>
 SimsTree::list(
     const size_t bloom_size,
-    const unsigned int thread_num)
+    const unsigned int thread_num) const
 {
     if (bloom_size <= 1 || thread_num <= 1) {
         return _list_single_threaded();
@@ -121,7 +121,7 @@ SimsTree::list(
 }
 
 std::vector<HeapedSimsNode>
-SimsTree::_list_single_threaded()
+SimsTree::_list_single_threaded() const
 {
     std::vector<HeapedSimsNode> nodes;
 
@@ -132,54 +132,62 @@ SimsTree::_list_single_threaded()
     return nodes;
 }
 
+static
+std::vector<HeapedSimsNode>
+_merge_vectors(
+    std::vector<std::vector<HeapedSimsNode>> &&vecs)
+{
+    std::vector<HeapedSimsNode> result;
+
+    for (std::vector<HeapedSimsNode> &vec : vecs) {
+        for (HeapedSimsNode &node : vec) {
+            result.push_back(std::move(node));
+        }
+    }
+    
+    return result;
+}
+
 std::vector<HeapedSimsNode>
 SimsTree::_list_multi_threaded(
     const size_t bloom_size,
-    const unsigned int thread_num)
+    const unsigned int thread_num) const
 {
-    const std::vector<HeapedSimsNode> branches =
-        _bloom(bloom_size);
+    const std::vector<HeapedSimsNode> branches = _bloom(bloom_size);
+    std::vector<std::vector<HeapedSimsNode>> nested_result(branches.size());
 
-    _index = 0;
-    std::vector<std::vector<HeapedSimsNode>> tmp(branches.size());
+    std::atomic_size_t index(0);
 
     std::vector<std::thread> threads;
     threads.reserve(branches.size());
-
     for (unsigned int i = 0; i < thread_num; i++) {
         threads.emplace_back(
-            &SimsTree::_thread, this, branches, &tmp);
+            &SimsTree::_thread_worker,
+            this, branches, &index, &nested_result);
     }
 
     for (std::thread &t : threads) {
         t.join();
     }
 
-    std::vector<HeapedSimsNode> result;
-
-    for (const std::vector<HeapedSimsNode> &n : tmp) {
-        for (const HeapedSimsNode &p : n) {
-            result.push_back(p);
-        }
-    }
-
-    return result;
+    return _merge_vectors(std::move(nested_result));
 }
 
 void
-SimsTree::_thread(
+SimsTree::_thread_worker(
     const std::vector<HeapedSimsNode> &branches,
-    std::vector<std::vector<HeapedSimsNode>> * result)
+    std::atomic_size_t * const index,
+    std::vector<std::vector<HeapedSimsNode>> * nested_result) const
 {
     while(true) {
-        const size_t i = _index++;
+        const size_t i = (*index)++;
 
         if (i >= branches.size()) {
             break;
         }
 
-        SimsTree t(branches[i], _short_relators, _long_relators);
-        (*result)[i] = t._list_single_threaded();
+        const SimsTree t(branches[i], _short_relators, _long_relators);
+        (*nested_result)[i] = t._list_single_threaded();
     }
 }
 
