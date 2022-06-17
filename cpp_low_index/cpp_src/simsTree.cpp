@@ -6,6 +6,7 @@
 #include "stackedSimsNode.h"
 
 #include <list>
+#include <thread>
 
 SimsTree::SimsTree(
     const HeapedSimsNode &root,
@@ -35,7 +36,7 @@ SimsTree::list()
     std::vector<HeapedSimsNode> nodes;
 
     SimsNodeStack stack(root);
-    
+
     _recurse(stack.GetNode(), &nodes);
 
     return nodes;
@@ -75,7 +76,7 @@ SimsTree::bloom(const size_t n)
 {
     std::list<HeapedSimsNode> r = { root };
 
-    auto it = r.begin();    
+    auto it = r.begin();
     bool has_incomplete_node = false;
 
     while (r.size() < n) {
@@ -117,4 +118,52 @@ SimsTree::bloom(const size_t n)
     }
 
     return std::vector<HeapedSimsNode>(r.begin(), r.end());
+}
+
+std::vector<HeapedSimsNode>
+SimsTree::threaded(
+    const std::vector<HeapedSimsNode> &nodes,
+    const unsigned int thread_num)
+{
+    _index = 0;
+    std::vector<std::vector<HeapedSimsNode>> tmp(nodes.size());
+
+    std::vector<std::thread> threads;
+    threads.reserve(nodes.size());
+
+    for (unsigned int i = 0; i < thread_num; i++) {
+        threads.emplace_back(
+            &SimsTree::_thread, this, nodes, &tmp);
+    }
+
+    for (std::thread &t : threads) {
+        t.join();
+    }
+
+    std::vector<HeapedSimsNode> result;
+
+    for (const std::vector<HeapedSimsNode> &n : tmp) {
+        for (const HeapedSimsNode &p : n) {
+            result.push_back(p);
+        }
+    }
+
+    return result;
+}
+
+void
+SimsTree::_thread(
+    const std::vector<HeapedSimsNode> &nodes,
+    std::vector<std::vector<HeapedSimsNode>> * result)
+{
+    while(true) {
+        const size_t i = _index++;
+
+        if (i >= nodes.size()) {
+            break;
+        }
+
+        SimsTree t(nodes[i], short_relators, long_relators);
+        (*result)[i] = t.list();
+    }
 }

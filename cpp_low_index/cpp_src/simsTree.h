@@ -3,6 +3,8 @@
 
 #include "heapedSimsNode.h"
 
+#include <atomic>
+
 class StackedSimsNode;
 
 class SimsTree
@@ -24,12 +26,21 @@ public:
     std::vector<HeapedSimsNode> list();
 
     std::vector<HeapedSimsNode> bloom(size_t n);
-    
+
+    std::vector<HeapedSimsNode> threaded(
+        const std::vector<HeapedSimsNode> &nodes,
+        unsigned int thread_num);
+
 private:
     const std::vector<std::vector<int>> short_relators;
     const std::vector<std::vector<int>> long_relators;
 
     void _recurse(const StackedSimsNode &n, std::vector<HeapedSimsNode> *nodes);
+
+    void _thread(const std::vector<HeapedSimsNode> &nodes,
+                 std::vector<std::vector<HeapedSimsNode>> * result);
+    
+    std::atomic_size_t _index;
 };
 
 #endif
