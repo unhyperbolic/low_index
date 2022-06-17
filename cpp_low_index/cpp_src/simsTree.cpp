@@ -3,6 +3,7 @@
 #include "simsTree.h"
 #include "stackedSimsNode.h"
 #include "simsNodeStack.h"
+#include "stackedSimsNode.h"
 
 SimsTree::SimsTree(
     const HeapedSimsNode &root,
