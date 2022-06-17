@@ -112,40 +112,33 @@ SimsNode::_relator_may_lift(
     if (vertex == std::numeric_limits<DegreeType>::max()) {
         return true;
     }
-    RelatorLengthType i;
     RelatorLengthType index = _lift_indices[j];
     RelatorLengthType save;
-    int label;
-    for (i = index; i < relator.size(); i++) {
-        label = relator[i];
+    for (RelatorLengthType i = index; i < relator.size(); i++) {
         save = vertex;
-        vertex = act_by(label, vertex);
+        vertex = act_by(relator[i], vertex);
+        if (i == relator.size() - 1) {
+            break;
+        }
         if (vertex == 0) {
             _lift_vertices[j] = save;
             _lift_indices[j] = i;
-            break;
+            return true;
         }
     }
 
-    if (i >= relator.size() - 1) {
-        if (vertex == 0) {
-            if (!verified_add_edge(label, save, v + 1)) {
-                return false;
-            }
-            // Note that there is an "if child._is_complete(): return self.relators_may_lift(child, relators)"
-            // in covers.pxi - which I am skipping here.
-            // I hope that is correct.
-            vertex = v + 1;
-        }
-        if (vertex == v + 1) {
+    if (vertex == v + 1) {
+        _lift_vertices[j] = std::numeric_limits<DegreeType>::max();
+        return true;
+    }
+    if (vertex == 0) {
+        if (verified_add_edge(relator.back(), save, v + 1)) {
             _lift_vertices[j] = std::numeric_limits<DegreeType>::max();
-            _lift_indices[j] = relator.size();
-        } else {
-            return false;
+            return true;
         }
     }
 
-    return true;
+    return false;
 }
 
 bool
