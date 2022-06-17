@@ -112,26 +112,26 @@ SimsNode::_relator_may_lift(
     if (vertex == std::numeric_limits<DegreeType>::max()) {
         return true;
     }
-    RelatorLengthType save;
-    for (RelatorLengthType i = _lift_indices[j]; i < relator.size(); i++) {
-        save = vertex;
-        vertex = act_by(relator[i], vertex);
+    RelatorLengthType next_vertex;
+    for (RelatorLengthType i = _lift_indices[j]; true; i++) {
+        next_vertex = act_by(relator[i], vertex);
         if (i == relator.size() - 1) {
             break;
         }
-        if (vertex == 0) {
-            _lift_vertices[j] = save;
+        if (next_vertex == 0) {
+            _lift_vertices[j] = vertex;
             _lift_indices[j] = i;
             return true;
         }
+        vertex = next_vertex;
     }
 
-    if (vertex == v + 1) {
+    if (next_vertex == v + 1) {
         _lift_vertices[j] = std::numeric_limits<DegreeType>::max();
         return true;
     }
-    if (vertex == 0) {
-        if (verified_add_edge(relator.back(), save, v + 1)) {
+    if (next_vertex == 0) {
+        if (verified_add_edge(relator.back(), vertex, v + 1)) {
             _lift_vertices[j] = std::numeric_limits<DegreeType>::max();
             return true;
         }
