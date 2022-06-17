@@ -108,8 +108,11 @@ SimsNode::_relator_may_lift(
 {
     const size_t j = n * max_degree() + v;
 
+    constexpr DegreeType finished =
+        std::numeric_limits<DegreeType>::max();
+    
     DegreeType vertex = _lift_vertices[j];
-    if (vertex == std::numeric_limits<DegreeType>::max()) {
+    if (vertex == finished) {
         return true;
     }
     RelatorLengthType next_vertex;
@@ -127,12 +130,17 @@ SimsNode::_relator_may_lift(
     }
 
     if (next_vertex == v + 1) {
-        _lift_vertices[j] = std::numeric_limits<DegreeType>::max();
+        _lift_vertices[j] = finished;
         return true;
     }
+
     if (next_vertex == 0) {
+        // Can't we simplify use add_edge instead of verified_add_edge
+        // here?
+        // That is, next_vertex == 0 if act_by(relator[i], vertex) == 0
+        // which is exactly what verified_add_edge is checking?
         if (verified_add_edge(relator.back(), vertex, v + 1)) {
-            _lift_vertices[j] = std::numeric_limits<DegreeType>::max();
+            _lift_vertices[j] = finished;
             return true;
         }
     }
