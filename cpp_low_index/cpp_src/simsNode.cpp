@@ -112,9 +112,8 @@ SimsNode::_relator_may_lift(
     if (vertex == std::numeric_limits<DegreeType>::max()) {
         return true;
     }
-    RelatorLengthType index = _lift_indices[j];
     RelatorLengthType save;
-    for (RelatorLengthType i = index; i < relator.size(); i++) {
+    for (RelatorLengthType i = _lift_indices[j]; i < relator.size(); i++) {
         save = vertex;
         vertex = act_by(relator[i], vertex);
         if (i == relator.size() - 1) {
