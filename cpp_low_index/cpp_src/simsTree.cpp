@@ -12,9 +12,9 @@ SimsTree::SimsTree(
     const HeapedSimsNode &root,
     const std::vector<std::vector<int>> &short_relators,
     const std::vector<std::vector<int>> &long_relators)
-  : root(root)
-  , short_relators(short_relators)
-  , long_relators(long_relators)
+  : _short_relators(short_relators)
+  , _long_relators(long_relators)
+  , _root(root)
 {
 }
 
@@ -35,7 +35,7 @@ SimsTree::list()
 {
     std::vector<HeapedSimsNode> nodes;
 
-    SimsNodeStack stack(root);
+    SimsNodeStack stack(_root);
 
     _recurse(stack.GetNode(), &nodes);
 
@@ -46,7 +46,7 @@ void
 SimsTree::_recurse(const StackedSimsNode &n, std::vector<HeapedSimsNode> *nodes)
 {
     if(n.is_complete()) {
-        if (n.relators_lift(long_relators)) {
+        if (n.relators_lift(_long_relators)) {
             nodes->push_back(n);
         }
     } else {
@@ -61,7 +61,7 @@ SimsTree::_recurse(const StackedSimsNode &n, std::vector<HeapedSimsNode> *nodes)
             if (n.act_by(-slot.first, v) == 0) {
                 StackedSimsNode new_subgraph(n);
                 new_subgraph.add_edge(slot.first, slot.second, v);
-                if (new_subgraph.relators_may_lift(short_relators)) {
+                if (new_subgraph.relators_may_lift(_short_relators)) {
                     if (new_subgraph.may_be_minimal()) {
                         _recurse(new_subgraph, nodes);
                     }
@@ -74,7 +74,7 @@ SimsTree::_recurse(const StackedSimsNode &n, std::vector<HeapedSimsNode> *nodes)
 std::vector<HeapedSimsNode>
 SimsTree::bloom(const size_t n)
 {
-    std::list<HeapedSimsNode> r = { root };
+    std::list<HeapedSimsNode> r = { _root };
 
     auto it = r.begin();
     bool has_incomplete_node = false;
@@ -105,7 +105,7 @@ SimsTree::bloom(const size_t n)
                 if (it->act_by(-slot.first, v) == 0) {
                     HeapedSimsNode new_subgraph(*it);
                     new_subgraph.add_edge(slot.first, slot.second, v);
-                    if (new_subgraph.relators_may_lift(short_relators)) {
+                    if (new_subgraph.relators_may_lift(_short_relators)) {
                         if (new_subgraph.may_be_minimal()) {
                             r.insert(it, new_subgraph);
                             has_incomplete_node = true;
@@ -163,7 +163,7 @@ SimsTree::_thread(
             break;
         }
 
-        SimsTree t(nodes[i], short_relators, long_relators);
+        SimsTree t(nodes[i], _short_relators, _long_relators);
         (*result)[i] = t.list();
     }
 }
