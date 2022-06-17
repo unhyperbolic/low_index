@@ -5,6 +5,8 @@
 #include "simsNodeStack.h"
 #include "stackedSimsNode.h"
 
+#include <list>
+
 SimsTree::SimsTree(
     const HeapedSimsNode &root,
     const std::vector<std::vector<int>> &short_relators,
@@ -68,18 +70,51 @@ SimsTree::_recurse(const StackedSimsNode &n, std::vector<HeapedSimsNode> *nodes)
     }
 }
 
-std::deque<HeapedSimsNode>
+std::vector<HeapedSimsNode>
 SimsTree::bloom(const size_t n)
 {
-    std::deque<HeapedSimsNode> result = { root };
+    std::list<HeapedSimsNode> r = { root };
 
-    bool keepGoing = true;
+    auto it = r.begin();    
+    bool has_incomplete_node = false;
 
-    while (result.size() < n && keepGoing) {
-        keepGoing = false;
+    while (r.size() < n) {
+        if (it == r.end()) {
+            if (it == r.begin()) {
+                break;
+            }
+            if (!has_incomplete_node) {
+                break;
+            }
+            it = r.begin();
+            has_incomplete_node = false;
+        }
 
-        result.front();
+        if (it->is_complete()) {
+            ++it;
+        } else {
+            const std::pair<CoveringSubgraph::LetterType,
+                            CoveringSubgraph::DegreeType> slot =
+                it->first_empty_slot();
+            const CoveringSubgraph::DegreeType m =
+                std::min<CoveringSubgraph::DegreeType>(
+                    it->degree() + 1,
+                    it->max_degree());
+            for (CoveringSubgraph::DegreeType v = 1; v <= m; v++) {
+                if (it->act_by(-slot.first, v) == 0) {
+                    HeapedSimsNode new_subgraph(*it);
+                    new_subgraph.add_edge(slot.first, slot.second, v);
+                    if (new_subgraph.relators_may_lift(short_relators)) {
+                        if (new_subgraph.may_be_minimal()) {
+                            r.insert(it, new_subgraph);
+                            has_incomplete_node = true;
+                        }
+                    }
+                }
+            }
+            it = r.erase(it);
+        }
     }
 
-    return result;
+    return std::vector<HeapedSimsNode>(r.begin(), r.end());
 }

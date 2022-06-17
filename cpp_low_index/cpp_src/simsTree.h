@@ -5,8 +5,6 @@
 
 class StackedSimsNode;
 
-#include <deque>
-
 class SimsTree
 {
 public:
@@ -25,7 +23,7 @@ public:
 
     std::vector<HeapedSimsNode> list();
 
-    std::deque<HeapedSimsNode> bloom(size_t n);
+    std::vector<HeapedSimsNode> bloom(size_t n);
     
 private:
     const std::vector<std::vector<int>> short_relators;
