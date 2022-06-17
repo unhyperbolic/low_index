@@ -14,6 +14,5 @@ void addSimsTree(pybind11::module_ &m) {
              pybind11::arg("max_degree"),
              pybind11::arg("short_relators"),
              pybind11::arg("long_relators"))
-        .def("list", &SimsTree::list)
-        .def("list_multithreaded", &SimsTree::list_multithreaded);
+        .def("list", &SimsTree::list);
 }
