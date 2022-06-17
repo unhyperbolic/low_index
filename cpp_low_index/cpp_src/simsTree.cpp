@@ -167,3 +167,10 @@ SimsTree::_thread(
         (*result)[i] = t.list();
     }
 }
+
+std::vector<HeapedSimsNode>
+SimsTree::list_multithreaded(
+    size_t bloom_size, unsigned int thread_num)
+{
+    return threaded(bloom(bloom_size), thread_num);
+}

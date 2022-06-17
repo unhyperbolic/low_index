@@ -31,6 +31,9 @@ public:
         const std::vector<HeapedSimsNode> &nodes,
         unsigned int thread_num);
 
+    std::vector<HeapedSimsNode> list_multithreaded(
+        size_t bloom_size, unsigned int thread_num);
+
 private:
     const std::vector<std::vector<int>> short_relators;
     const std::vector<std::vector<int>> long_relators;
