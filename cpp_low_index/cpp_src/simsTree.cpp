@@ -127,7 +127,7 @@ SimsTree::_list_single_threaded() const
 
     SimsNodeStack stack(_root);
 
-    _recurse(stack.GetNode(), &nodes);
+    _recurse(stack.get_node(), &nodes);
 
     return nodes;
 }
