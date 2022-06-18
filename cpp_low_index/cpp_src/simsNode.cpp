@@ -135,10 +135,6 @@ SimsNode::_relator_may_lift(
     }
 
     if (next_vertex == 0) {
-        // Can't we simplify use add_edge instead of verified_add_edge
-        // here?
-        // That is, next_vertex == 0 if act_by(relator[i], vertex) == 0
-        // which is exactly what verified_add_edge is checking?
         if (verified_add_edge(relator.back(), vertex, v + 1)) {
             _lift_vertices[j] = finished;
             return true;
@@ -157,7 +153,8 @@ SimsNode::relators_lift(const std::vector<std::vector<int>> &relators) const
             for (const int letter : relator) {
                 vertex = act_by(letter, vertex);
                 if (vertex == 0) {
-                    throw std::domain_error("relators_lift: The graph is not a covering.");
+                    throw std::domain_error(
+                        "relators_lift: The graph is not a covering.");
                 }
             }
             if (vertex != v) {
