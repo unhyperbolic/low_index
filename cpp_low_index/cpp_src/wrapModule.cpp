@@ -4,7 +4,7 @@ namespace low_index {
 
 void addCoveringSubgraph(pybind11::module_ &m);
 void addAbstractSimsNode(pybind11::module_ &m);
-void addHeapedSimsNode(pybind11::module_ &m);
+void addSimsNode(pybind11::module_ &m);
 void addSimsTree(pybind11::module_ &m);
 
 }
@@ -21,6 +21,6 @@ A C++ reimplementation of `low_index`.
 
     addCoveringSubgraph(m);
     addAbstractSimsNode(m);
-    addHeapedSimsNode(m);
+    addSimsNode(m);
     addSimsTree(m);
 }

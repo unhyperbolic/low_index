@@ -1,16 +1,16 @@
-#include "heapedSimsNode.h"
+#include "simsNode.h"
 
 namespace low_index {
 
 void
-HeapedSimsNode::_allocate_memory()
+SimsNode::_allocate_memory()
 {
     const _MemoryLayout layout(*this);
     _memory = std::make_unique<uint8_t[]>(layout.size);
     _apply_memory_layout(layout, _memory.get());
 }
 
-HeapedSimsNode::HeapedSimsNode(
+SimsNode::SimsNode(
     const RankType rank,
     const DegreeType max_degree,
     const unsigned int num_relators)
@@ -20,7 +20,7 @@ HeapedSimsNode::HeapedSimsNode(
     _initialize_memory();
 }
 
-HeapedSimsNode::HeapedSimsNode(
+SimsNode::SimsNode(
     const AbstractSimsNode &other)
  : AbstractSimsNode(other)
 {
@@ -28,8 +28,7 @@ HeapedSimsNode::HeapedSimsNode(
     _copy_memory(other);
 }
 
-HeapedSimsNode::HeapedSimsNode(
-    const HeapedSimsNode &other)
+SimsNode::SimsNode(const SimsNode &other)
  : AbstractSimsNode(other)
 {
     if (!other._memory) {
@@ -39,8 +38,7 @@ HeapedSimsNode::HeapedSimsNode(
     _copy_memory(other);
 }
 
-HeapedSimsNode::HeapedSimsNode(
-    HeapedSimsNode &&other)
+SimsNode::SimsNode(SimsNode &&other)
  : AbstractSimsNode(other)
  , _memory(std::move(other._memory))
 {

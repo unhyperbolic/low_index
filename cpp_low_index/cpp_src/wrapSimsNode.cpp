@@ -1,4 +1,4 @@
-#include "heapedSimsNode.h"
+#include "simsNode.h"
 
 #include "pybind11/pybind11.h"
 
@@ -6,8 +6,8 @@
 
 namespace low_index {
 
-void addHeapedSimsNode(pybind11::module_ &m) {
-    pybind11::class_<HeapedSimsNode, AbstractSimsNode>(m, "HeapedSimsNode")
+void addSimsNode(pybind11::module_ &m) {
+    pybind11::class_<SimsNode, AbstractSimsNode>(m, "SimsNode")
         .def(pybind11::init<RankType,
                             DegreeType,
                             unsigned int>(),
