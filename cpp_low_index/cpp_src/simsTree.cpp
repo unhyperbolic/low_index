@@ -1,6 +1,5 @@
 #include "simsTree.h"
 #include "stackedSimsNode.h"
-#include "simsNodeStack.h"
 
 #include <list>
 #include <thread>
