@@ -6,7 +6,7 @@
 
 namespace low_index {
 
-void addLowIndex(pybind11::module_ m) {
+void addLowIndex(pybind11::module_ &m) {
 
     m.def("permutation_reps",
           &permutation_reps,
