@@ -1,3 +1,6 @@
+#include <iostream>
+#include <chrono>
+
 #include "simsTree.h"
 #include "stackedSimsNode.h"
 #include "simsNodeStack.h"
@@ -5,6 +8,8 @@
 #include <list>
 #include <thread>
 #include <atomic>
+
+using namespace std;
 
 namespace low_index {
 
@@ -153,11 +158,22 @@ SimsTree::_list_multi_threaded(
     const size_t bloom_size,
     const unsigned int thread_num) const
 {
+    auto t0 = chrono::steady_clock::now();
+    
+    std::cout << "Blooming..." << std::endl;
     const std::vector<HeapedSimsNode> branches = _bloom(bloom_size);
+
+    auto t1 = chrono::steady_clock::now();
+    
+    std::cout << "Allocating..." << std::endl;
     std::vector<std::vector<HeapedSimsNode>> nested_result(branches.size());
+
+    auto t2 = chrono::steady_clock::now();
 
     std::atomic_size_t index(0);
 
+    std::cout << "Starting threads..." << std::endl;
+    
     std::vector<std::thread> threads;
     threads.reserve(branches.size());
     for (unsigned int i = 0; i < thread_num; i++) {
@@ -170,7 +186,28 @@ SimsTree::_list_multi_threaded(
         t.join();
     }
 
-    return _merge_vectors(std::move(nested_result));
+    auto t3 = chrono::steady_clock::now();
+
+    std::cout << "Threads done." << std::endl;
+
+    auto result = _merge_vectors(std::move(nested_result));
+    
+    auto t4 = chrono::steady_clock::now();
+
+    std::cout << "Blooming: "
+              << chrono::duration_cast<chrono::milliseconds>(t1 - t0).count()
+              << std::endl;
+    std::cout << "Allocating: "
+              << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count()
+              << std::endl;
+    std::cout << "Threads: "
+              << chrono::duration_cast<chrono::milliseconds>(t3 - t2).count()
+              << std::endl;
+    std::cout << "Merging: "
+              << chrono::duration_cast<chrono::milliseconds>(t4 - t3).count()
+              << std::endl;
+    
+    return result;
 }
 
 void
@@ -189,6 +226,8 @@ SimsTree::_thread_worker(
         const SimsTree t(branches[i], _short_relators, _long_relators);
         (*nested_result)[i] = t._list_single_threaded();
     }
+
+    std::cout << "Thread done." << std::endl;
 }
 
 } // Namespace low_index
