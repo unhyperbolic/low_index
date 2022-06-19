@@ -12,18 +12,17 @@ ext_modules = [
     Pybind11Extension("cpp_low_index",
         [
             "cpp_src/coveringSubgraph.cpp",
-            "cpp_src/heapedSimsNode.cpp",
-            "cpp_src/stackedSimsNode.cpp",
             "cpp_src/simsNode.cpp",
-            "cpp_src/simsNodeStack.cpp",
+            "cpp_src/stackedSimsNode.cpp",
+            "cpp_src/abstractSimsNode.cpp",
             "cpp_src/simsTree.cpp",
             "cpp_src/wrapCoveringSubgraph.cpp",
-            "cpp_src/wrapHeapedSimsNode.cpp",
             "cpp_src/wrapSimsNode.cpp",
+            "cpp_src/wrapAbstractSimsNode.cpp",
             "cpp_src/wrapSimsTree.cpp",
             "cpp_src/wrapModule.cpp"
          ],
-        cxx_std=14, # C++17 implies macOS 10.14
+        cxx_std=11, # C++17 implies macOS 10.14
         # Example: passing in the version to the compiled code
         define_macros = [('VERSION_INFO', __version__)],
         ),
