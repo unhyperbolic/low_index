@@ -10,7 +10,7 @@ T* _move_pointer(T* const p, const size_t n)
 }
 
 StackedSimsNode::StackedSimsNode(const StackedSimsNode &other)
-  : SimsNode(other)
+  : AbstractSimsNode(other)
 {
     _outgoing = _move_pointer(other._outgoing, other._memory_size);
     _incoming = _move_pointer(other._incoming, other._memory_size);
@@ -22,9 +22,9 @@ StackedSimsNode::StackedSimsNode(const StackedSimsNode &other)
 }
 
 StackedSimsNode::StackedSimsNode(
-    const SimsNode &other,
+    const AbstractSimsNode &other,
     uint8_t * const memory)
- : SimsNode(other)
+  : AbstractSimsNode(other)
 {
     const _MemoryLayout layout(*this);
     _apply_memory_layout(layout, memory);

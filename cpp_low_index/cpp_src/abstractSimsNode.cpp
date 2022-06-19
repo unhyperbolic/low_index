@@ -1,8 +1,8 @@
-#include "simsNode.h"
+#include "abstractSimsNode.h"
 
 namespace low_index {
 
-SimsNode::SimsNode(
+AbstractSimsNode::AbstractSimsNode(
         const RankType rank,
         const DegreeType max_degree,
         const unsigned int num_relators)
@@ -11,8 +11,8 @@ SimsNode::SimsNode(
 {
 }
 
-SimsNode::SimsNode(
-    const SimsNode &other)
+AbstractSimsNode::AbstractSimsNode(
+    const AbstractSimsNode &other)
  : CoveringSubgraph(other)
  , _num_relators(other._num_relators)
 {
@@ -26,8 +26,8 @@ _align(const size_t n)
     return ((n + alignof(T) - 1 ) / alignof(T)) * alignof(T);
 }
 
-SimsNode::_MemoryLayout::_MemoryLayout(
-    const SimsNode &node)
+AbstractSimsNode::_MemoryLayout::_MemoryLayout(
+    const AbstractSimsNode &node)
 {
     // DegreeType *outgoing;
     size_t t = outgoing_offset;
@@ -52,7 +52,7 @@ SimsNode::_MemoryLayout::_MemoryLayout(
 }
 
 void
-SimsNode::_apply_memory_layout(
+AbstractSimsNode::_apply_memory_layout(
     const _MemoryLayout &layout,
     uint8_t * const memory)
 {
@@ -72,7 +72,7 @@ SimsNode::_apply_memory_layout(
 }
 
 void
-SimsNode::_initialize_memory()
+AbstractSimsNode::_initialize_memory()
 {
     memset(_memory_start(), 0, _memory_size);
     for (size_t n = 0; n < _num_relators; n++) {
@@ -84,13 +84,13 @@ SimsNode::_initialize_memory()
 }
 
 void
-SimsNode::_copy_memory(const SimsNode &other)
+AbstractSimsNode::_copy_memory(const AbstractSimsNode &other)
 {
     memcpy(_memory_start(), other._memory_start(), _memory_size);
 }
 
 bool
-SimsNode::relators_may_lift(const std::vector<Relator> &relators)
+AbstractSimsNode::relators_may_lift(const std::vector<Relator> &relators)
 {
     for (size_t n = 0; n < relators.size(); n++) {
         for (DegreeType v = 0; v < degree(); v++) {
@@ -103,7 +103,7 @@ SimsNode::relators_may_lift(const std::vector<Relator> &relators)
 }
 
 bool
-SimsNode::_relator_may_lift(
+AbstractSimsNode::_relator_may_lift(
     const Relator &relator,
     const size_t n,
     const DegreeType v)
@@ -147,7 +147,7 @@ SimsNode::_relator_may_lift(
 }
 
 bool
-SimsNode::relators_lift(const std::vector<Relator> &relators) const
+AbstractSimsNode::relators_lift(const std::vector<Relator> &relators) const
 {
     for (const Relator &relator : relators) {
         for (DegreeType v = 1; v <= degree(); v++) {
@@ -169,7 +169,7 @@ SimsNode::relators_lift(const std::vector<Relator> &relators) const
 }
 
 bool
-SimsNode::may_be_minimal() const
+AbstractSimsNode::may_be_minimal() const
 {
     for (DegreeType basepoint = 2; basepoint <= degree(); basepoint++) {
         if (!_may_be_minimal(basepoint)) {
@@ -180,7 +180,7 @@ SimsNode::may_be_minimal() const
 }
 
 bool
-SimsNode::_may_be_minimal(const DegreeType basepoint) const
+AbstractSimsNode::_may_be_minimal(const DegreeType basepoint) const
 {
     DegreeType std_to_alt[degree()+1];
     memset(std_to_alt, 0, sizeof(std_to_alt));

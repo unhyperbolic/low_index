@@ -14,15 +14,15 @@ HeapedSimsNode::HeapedSimsNode(
     const RankType rank,
     const DegreeType max_degree,
     const unsigned int num_relators)
- : SimsNode(rank, max_degree, num_relators)
+ : AbstractSimsNode(rank, max_degree, num_relators)
 {
     _allocate_memory();
     _initialize_memory();
 }
 
 HeapedSimsNode::HeapedSimsNode(
-    const SimsNode &other)
- : SimsNode(other)
+    const AbstractSimsNode &other)
+ : AbstractSimsNode(other)
 {
     _allocate_memory();
     _copy_memory(other);
@@ -30,7 +30,7 @@ HeapedSimsNode::HeapedSimsNode(
 
 HeapedSimsNode::HeapedSimsNode(
     const HeapedSimsNode &other)
- : SimsNode(other)
+ : AbstractSimsNode(other)
 {
     if (!other._memory) {
         return;
@@ -41,7 +41,7 @@ HeapedSimsNode::HeapedSimsNode(
 
 HeapedSimsNode::HeapedSimsNode(
     HeapedSimsNode &&other)
- : SimsNode(other)
+ : AbstractSimsNode(other)
  , _memory(std::move(other._memory))
 {
     _outgoing = other._outgoing;

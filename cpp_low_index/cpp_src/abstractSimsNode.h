@@ -1,11 +1,11 @@
-#ifndef LOW_INDEX_SIMS_NODE_H
-#define LOW_INDEX_SIMS_NODE_H
+#ifndef LOW_INDEX_ABSTRACT_SIMS_NODE_H
+#define LOW_INDEX_ABSTRACT_SIMS_NODE_H
 
 #include "coveringSubgraph.h"
 
 namespace low_index {
 
-class SimsNode : public CoveringSubgraph
+class AbstractSimsNode : public CoveringSubgraph
 {
 public:
 
@@ -18,15 +18,15 @@ public:
     unsigned int num_relators() const { return _num_relators; }
 
 protected:
-    SimsNode(RankType rank,
-             DegreeType max_degree,
-             unsigned int num_relators);
+    AbstractSimsNode(RankType rank,
+                     DegreeType max_degree,
+                     unsigned int num_relators);
 
-    SimsNode(const SimsNode &other);
+    AbstractSimsNode(const AbstractSimsNode &other);
 
     struct _MemoryLayout
     {
-        _MemoryLayout(const SimsNode &node);
+        _MemoryLayout(const AbstractSimsNode &node);
 
         static constexpr size_t outgoing_offset = 0;
         size_t incoming_offset;
@@ -38,7 +38,7 @@ protected:
     void _apply_memory_layout(const _MemoryLayout &layout,
                               uint8_t * memory);
     void _initialize_memory();
-    void _copy_memory(const SimsNode &other);
+    void _copy_memory(const AbstractSimsNode &other);
 
 private:
     bool _relator_may_lift(
