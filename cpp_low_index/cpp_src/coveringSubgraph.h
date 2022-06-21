@@ -40,13 +40,13 @@ namespace low_index {
 /// the relator.
 ///
 /// Such a complete graph can be interpreted in the following ways:
-/// 1. A coset table for a low index subgroup. Each vertex corresponds
-///    to a coset. To multiply a coset by a letter l, look at the end
-///    of an edge labeled by l and starting at the given coset.
+/// 1. A coset table for a subgroup H of G. Each vertex corresponds
+///    to a coset in G/H. To multiply a coset by a letter l, look at the
+///    end of an edge labeled by l and starting at the given coset.
 /// 2. A representation G -> S_degree. The image of a letter l is
 ///    the permutation obtained by letting all edges labeled l take
 ///    the vertices to the vertices.
-/// 3. A covering space of the Cayley complex with graph as 1-skeleton.
+/// 3. A covering space of the Cayley complex with the graph as 1-skeleton.
 /// 4. A covering space of a 3-manifold. Take a copy of the fundamental
 ///    polyhedron for each vertex. For each edge labeled l, lift the
 ///    face-pairing so that it pairs a face of the copy corresponding
@@ -59,7 +59,7 @@ namespace low_index {
 /// That is, if there is a directed edge from i to j labeled by l
 /// (with l > 0), then the entry at (i, l) in the outgoing
 /// matrix is j and the one at (j, l) in the incoming matrix is i.
-/// A matrix entry takes the value zero, if no edge with the respective
+/// A matrix entry takes the value zero if no edge with the respective
 /// label starts or ends, respectively, at the respective vertex.
 ///
 /// This is an abstract class. In particular, it is the responsibility
