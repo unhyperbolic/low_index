@@ -1,0 +1,77 @@
+\documentclass[12pt]{article}
+\usepackage[width=6.5in,height=10in]{geometry}
+\usepackage{tgpagella}
+\usepackage{amsrefs}
+\parindent 0pt 
+\parskip 1ex 
+\begin{document}
+\normalfont
+\title{LOW\_INDEX, Revisited and Implemented}
+\author{Marc Culler, Nathan Dunfield, and Matthias G\"orner}
+\maketitle
+\begin{abstract}\noindent
+This note provides a simple description of Charles Sims' LOW\_INDEX algorithm in terms of elementary covering space theory.  It accompanies a working open source implementation of the algorithm.
+\end{abstract}
+\parindent 0pt 
+\parskip 1ex 
+\section{Introduction}
+
+In his $1994$ memoir \cite[Chapter 5]{Sims} Charles Sims presented a pseudo-code description of an algorithm for enumerating all conjugacy classes of subgroups of a finitely presented group $G$ with index at most a specified integer $N$.  The input to the algorithm is a finite presentation of a group and the output is a system of distinct representatives for conjugacy classes of subgroups of index at most $N$.  He named the algorithm LOW\_INDEX.  The algorithm has been implemented in a number of computer algebra systems, including the proprietary MAGMA system and the open source GAP system.  It is considered to be the most efficient general purpose algorithm for this task.
+
+The description in Sims' book is lengthy and technical, requiring several chapters of preparation before the ideas of the algorithm can be described.  In this note we will present a simplified description of the algorithm which is accessible to anyone who is familiar with the basic theory of covering spaces of graphs as presented in the classic undergraduate text book written by William Massey \cite{Massey}.
+
+Breaking with a long tradition of publishing mathematical algorithms, this note is being published as part of a freely distributable open source implementation of the algorithm which also happens to be faster than any other implementation known to the authors.  The implementation is configured as a package for the Python programming language, based on a Python extension module written in C++ and wrapped using pybind-11.  The package uses parallel computation for optimal speed, but it is actually faster than the implementations mentioned above even when restricted to a single CPU.
+
+\section{Background}
+
+\subsection{Cayley Complexes}
+
+\subsection{The Fundamental Theorem of Covering Space Theory}
+
+\subsection{One Dimension Suffices}
+
+\subsection{Conjugacy}
+
+\section{Conventions}
+
+\subsection{Open Cells}
+
+\subsection{Slots}
+
+\subsection{Permutation Representations}
+
+\section{The Algorithm}
+
+\subsection{A Canonical Base Point}
+
+\subsection{The Sims Tree}
+
+\section{Performance}
+
+\begin{bibdiv}
+\begin{biblist}
+\bib{Sims}{book}{
+   author={Sims, Charles C.},
+   title={Computation with finitely presented groups},
+   series={Encyclopedia of Mathematics and its Applications},
+   volume={48},
+   publisher={Cambridge University Press, Cambridge},
+   date={1994},
+   pages={xiii+604},
+   isbn={0-521-43213-8},
+   review={\MR{1267733}},
+   doi={10.1017/CBO9780511574702},
+ }
+\bib{Massey}{book}{
+   author={Massey, William S.},
+   title={Algebraic topology: an introduction},
+   series={Graduate Texts in Mathematics, Vol. 56},
+   note={Reprint of the 1967 edition},
+   publisher={Springer-Verlag, New York-Heidelberg},
+   date={1977},
+   pages={xxi+261 pp. ISBN 0-387-90271-6},
+   review={\MR{0448331}},
+}
+ \end{biblist}
+\end{bibdiv}
+\end{document}
