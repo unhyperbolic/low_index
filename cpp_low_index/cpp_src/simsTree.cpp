@@ -38,6 +38,7 @@ SimsTree::_recurse(
         if (n.relators_lift(_long_relators)) {
             SimsNode copy(n);
             if (copy.relators_may_lift(_short_relators)) {
+                // Don't we need a copy.may_be_minimal here???
                 nodes->push_back(std::move(copy));
             }
         }
