@@ -1,5 +1,8 @@
 #include "simsNode.h"
 
+#include <limits>
+#include <stdexcept>
+
 namespace low_index {
 
 void
@@ -19,6 +22,22 @@ SimsNode::SimsNode(
     const unsigned int num_relators)
  : AbstractSimsNode(rank, max_degree, num_relators)
 {
+    // Note that between the smallest and largest value a signed
+    // integral type can have, the largest value has the smaller
+    // absolute value.
+    if (!(rank <= std::numeric_limits<LetterType>::max())) {
+        throw std::domain_error(
+            "rank can be at most " +
+            std::to_string(static_cast<int>(
+                               std::numeric_limits<LetterType>::max())));
+    }
+    if (!(max_degree < std::numeric_limits<DegreeType>::max())) {
+        throw std::domain_error(
+            "max_degree has to be smaller than " +
+            std::to_string(static_cast<int>(
+                               std::numeric_limits<DegreeType>::max())));
+    }
+
     _allocate_memory();
     _initialize_memory();
 }
