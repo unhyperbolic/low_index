@@ -93,7 +93,7 @@ public:
         _ThreadSharedContext(const SimsNode &root)
             : root_info(root), index(0)
             , interrupt_thread(false)
-            , num_working_threads(1)
+            , num_working_threads(0)
         {
             parent_work_info = &root_info;
             root_info.pending_work_infos.push_back(_PendingWorkInfo(root));

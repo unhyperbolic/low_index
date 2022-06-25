@@ -225,9 +225,10 @@ SimsTree::_thread_worker_new(
                 ctx->num_working_threads++;
             }
             if (index == n) {
-                ctx->num_working_threads--;
+//                ctx->num_working_threads--;
             }
 
+            
             if (ctx->num_working_threads == 0 && index >= n) {
                 break;
             }
@@ -253,7 +254,7 @@ SimsTree::_thread_worker_new(
                 
                 {
                     std::unique_lock<std::mutex> lk(ctx->m);
-                    ctx->num_working_threads++;
+//                    ctx->num_working_threads++;
                     ctx->parent_work_info = &current_work_info;
                     ctx->index = 0;
                 }
