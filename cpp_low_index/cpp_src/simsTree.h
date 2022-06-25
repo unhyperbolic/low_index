@@ -85,7 +85,7 @@ public:
         // Filled in by worker thread with complete nodes.
         std::vector<SimsNode> complete_nodes;
         // If worker thread was interrupted, filled with the remaining nodes that need to be processed.
-        std::vector<_PendingWorkInfo> pending_work_infos;
+        std::vector<_PendingWorkInfo> children;
     };
 
     class _ThreadSharedContext {
@@ -96,8 +96,8 @@ public:
             , interrupt_thread(false)
             , num_working_threads(0)
         {
-            root_info.pending_work_infos.push_back(_PendingWorkInfo(root));
-            work_infos = &root_info.pending_work_infos;
+            root_info.children.push_back(_PendingWorkInfo(root));
+            work_infos = &root_info.children;
         }
         
         _PendingWorkInfo root_info;

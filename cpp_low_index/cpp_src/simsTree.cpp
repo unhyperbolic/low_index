@@ -153,7 +153,7 @@ _merge_vectors(
         result->push_back(n);
     }
 
-    for (const SimsTree::_PendingWorkInfo &c : w.pending_work_infos) {
+    for (const SimsTree::_PendingWorkInfo &c : w.children) {
         _merge_vectors(c, result);
     }
 }
@@ -186,12 +186,12 @@ SimsTree::_recurse(
                 if (new_subgraph.relators_may_lift(_short_relators)) {
                     if (new_subgraph.may_be_minimal()) {
                         if (was_interrupted) {
-                            work_info->pending_work_infos.push_back(
+                            work_info->children.push_back(
                                 _PendingWorkInfo(new_subgraph));
                         } else {
                             if (!new_subgraph.is_complete() && ctx->interrupt_thread.exchange(false)) {
                                 was_interrupted = true;
-                                work_info->pending_work_infos.push_back(
+                                work_info->children.push_back(
                                     _PendingWorkInfo(new_subgraph));
                             } else {
                                 _recurse(ctx, new_subgraph, work_info);
@@ -242,7 +242,7 @@ SimsTree::_thread_worker_new(
             tree._recurse(ctx, stack.get_node(), &work_info);
             if (tree.was_interrupted) {
                 std::unique_lock<std::mutex> lk(ctx->m);
-                ctx->work_infos = &work_info.pending_work_infos;
+                ctx->work_infos = &work_info.children;
                 ctx->index = 0;
             }
             ctx->num_working_threads--;
