@@ -210,56 +210,40 @@ SimsTree::_thread_worker_new(
 {
     while(true) {
         size_t index;
-        size_t n;
         std::vector<_PendingWorkInfo> * work_infos = nullptr;
         
         {
             std::unique_lock<std::mutex> lk(ctx->m);
-            index = ctx->index++;
+            index = ctx->index;
 
-            n = ctx->work_infos->size();
+            const size_t n = ctx->work_infos->size();
 
             if (index < n) {
                 ctx->num_working_threads++;
+                ctx->index++;
                 work_infos = ctx->work_infos;
-            }
-            if (index == n) {
-//                ctx->num_working_threads--;
-                        ctx->interrupt_thread.exchange(true);
-            }
+            } else {
+                if (index == n) {
+                    ctx->index++;
+                    ctx->interrupt_thread.exchange(true);
+                }
             
-            if (ctx->num_working_threads == 0 && index >= n) {
-                break;
+                if (ctx->num_working_threads == 0) {
+                    break;
+                }
             }
-            
         }
 
         if (work_infos) {
-            _PendingWorkInfo &current_work_info =
-                (*work_infos)[index];
-            SimsTree tree(current_work_info.root, _short_relators, _long_relators);
+            _PendingWorkInfo &work_info = (*work_infos)[index];
+            SimsTree tree(work_info.root, _short_relators, _long_relators);
             tree.was_interrupted = false;
-            SimsNodeStack stack(current_work_info.root);
-            tree._recurse(ctx, stack.get_node(), &current_work_info);
+            SimsNodeStack stack(work_info.root);
+            tree._recurse(ctx, stack.get_node(), &work_info);
             if (tree.was_interrupted) {
-                if (0) {
-                    std::unique_lock<std::mutex> lk(ctx->out_mutex);
-                    std::cout << std::this_thread::get_id() << " index was " << (ctx->index) << std::endl;
-                }
-
-                
-                {
-                    
-                    std::unique_lock<std::mutex> lk(ctx->m);
-//                    ctx->num_working_threads++;
-                    ctx->work_infos = &current_work_info.pending_work_infos;
-                    ctx->index = 0;
-                }
-
-                if (0) {
-                    std::unique_lock<std::mutex> lk(ctx->out_mutex);
-                    std::cout << std::this_thread::get_id() << " interrupted tree " << (current_work_info.pending_work_infos.size() - 1) << std::endl;
-                }
+                std::unique_lock<std::mutex> lk(ctx->m);
+                ctx->work_infos = &work_info.pending_work_infos;
+                ctx->index = 0;
             }
             ctx->num_working_threads--;
 //            ctx->wake_up_threads.notify_all();
