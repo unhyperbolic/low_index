@@ -209,15 +209,26 @@ SimsTree::_thread_worker_new(
     _ThreadSharedContext * ctx) const
 {
     while(ctx->num_working_threads > 0) {
-        ctx->num_working_threads++;
+//        ctx->num_working_threads++;
 
         size_t index;
+        size_t n;
         _PendingWorkInfo *parent_work_info = nullptr;
+        
         
         {
             std::unique_lock<std::mutex> lk(ctx->m);
             index = ctx->index++;
             parent_work_info = ctx->parent_work_info;
+
+            n = parent_work_info->pending_work_infos.size();
+
+            if (index < n) {
+                ctx->num_working_threads++;
+            }
+            if (index == n) {
+                ctx->num_working_threads--;
+            }
         }
 
         std::vector<_PendingWorkInfo> &current_work_infos =
@@ -236,6 +247,7 @@ SimsTree::_thread_worker_new(
                     std::unique_lock<std::mutex> lk(ctx->out_mutex);
                     std::cout << std::this_thread::get_id() << " index was " << (ctx->index) << std::endl;
                 }
+
                 
                 ctx->num_working_threads++;
 
@@ -244,21 +256,22 @@ SimsTree::_thread_worker_new(
                 
                     ctx->parent_work_info = &current_work_info;
 
-                    {
-                        std::unique_lock<std::mutex> lk(ctx->out_mutex);
-                        std::cout << std::this_thread::get_id() << " interrupted tree " << (current_work_info.pending_work_infos.size() - 1) << std::endl;
-                    }
                     
                 
                     ctx->index = 0;
                 }
 
+                {
+                    std::unique_lock<std::mutex> lk(ctx->out_mutex);
+                    std::cout << std::this_thread::get_id() << " interrupted tree " << (current_work_info.pending_work_infos.size() - 1) << std::endl;
+                }
+
+
 //                ctx->wake_up_threads.notify_all();
             }
-        }
-        ctx->num_working_threads--;
-        if (index == current_work_infos.size()) {
             ctx->num_working_threads--;
+        }
+        if (index == current_work_infos.size()) {
             ctx->interrupt_thread.exchange(true);
 //            ctx->wake_up_threads.notify_all();
         }
