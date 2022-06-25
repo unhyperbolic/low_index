@@ -243,9 +243,11 @@ SimsTree::_thread_worker_new(
             SimsNodeStack stack(work_info.root);
             tree._recurse(ctx, stack.get_node(), &work_info);
             if (tree.was_interrupted) {
-                std::unique_lock<std::mutex> lk(ctx->m);
-                ctx->work_infos = &work_info.children;
-                ctx->index = 0;
+                {
+                    std::unique_lock<std::mutex> lk(ctx->m);
+                    ctx->work_infos = &work_info.children;
+                    ctx->index = 0;
+                }
             }
             ctx->num_working_threads--;
             ctx->wake_up_threads.notify_all();
