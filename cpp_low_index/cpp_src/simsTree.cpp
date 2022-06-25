@@ -209,8 +209,6 @@ SimsTree::_thread_worker_new(
     _ThreadSharedContext * ctx) const
 {
     while(ctx->num_working_threads > 0) {
-//        ctx->num_working_threads++;
-
         size_t index;
         size_t n;
         _PendingWorkInfo *parent_work_info = nullptr;
@@ -243,30 +241,22 @@ SimsTree::_thread_worker_new(
             SimsNodeStack stack(current_work_info.root);
             tree._recurse(ctx, stack.get_node(), &current_work_info);
             if (tree.was_interrupted) {
-                {
+                if (0) {
                     std::unique_lock<std::mutex> lk(ctx->out_mutex);
                     std::cout << std::this_thread::get_id() << " index was " << (ctx->index) << std::endl;
                 }
-
                 
-                ctx->num_working_threads++;
-
                 {
                     std::unique_lock<std::mutex> lk(ctx->m);
-                
+                    ctx->num_working_threads++;
                     ctx->parent_work_info = &current_work_info;
-
-                    
-                
                     ctx->index = 0;
                 }
 
-                {
+                if (0) {
                     std::unique_lock<std::mutex> lk(ctx->out_mutex);
                     std::cout << std::this_thread::get_id() << " interrupted tree " << (current_work_info.pending_work_infos.size() - 1) << std::endl;
                 }
-
-
             }
             ctx->num_working_threads--;
             ctx->wake_up_threads.notify_all();
@@ -304,13 +294,13 @@ SimsTree::_list_multi_threaded(
         t.join();
     }
 
-    std::cout << "Merging" << std::endl;
+//    std::cout << "Merging" << std::endl;
     
     std::vector<SimsNode> result;
 
     _merge_vectors(ctx.root_info, &result);
 
-    std::cout << "Merged" << std::endl;
+//    std::cout << "Merged" << std::endl;
     
     return result;
     
