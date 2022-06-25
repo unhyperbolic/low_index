@@ -146,15 +146,14 @@ SimsTree::_list_single_threaded() const
 static
 void
 _merge_vectors(
-    const SimsTree::_PendingWorkInfo &w,
+    const std::vector<SimsTree::_PendingWorkInfo> &infos,
     std::vector<SimsNode> * result)
 {
-    for (const SimsNode &n : w.complete_nodes) {
-        result->push_back(n);
-    }
-
-    for (const SimsTree::_PendingWorkInfo &c : w.children) {
-        _merge_vectors(c, result);
+    for (const auto &info : infos) {
+        for (const SimsNode &n : info.complete_nodes) {
+            result->push_back(n);
+        }
+        _merge_vectors(info.children, result);
     }
 }
 
@@ -229,8 +228,11 @@ SimsTree::_thread_worker_new(
                 }
             
                 if (ctx->num_working_threads == 0) {
+                    ctx->wake_up_threads.notify_all();
                     break;
                 }
+
+                ctx->wake_up_threads.wait(lk);
             }
         }
 
@@ -246,14 +248,14 @@ SimsTree::_thread_worker_new(
                 ctx->index = 0;
             }
             ctx->num_working_threads--;
-//            ctx->wake_up_threads.notify_all();
-        } else {
+            ctx->wake_up_threads.notify_all();
+        } /* else {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             
 //            std::mutex m;
 //            std::unique_lock<std::mutex> lk(ctx->x);
 //            ctx->wake_up_threads.wait(lk);
-        }
+} */
     }
 }
     
@@ -280,7 +282,7 @@ SimsTree::_list_multi_threaded(
     
     std::vector<SimsNode> result;
 
-    _merge_vectors(ctx.root_info, &result);
+    _merge_vectors(ctx.root_infos, &result);
 
 //    std::cout << "Merged" << std::endl;
     
