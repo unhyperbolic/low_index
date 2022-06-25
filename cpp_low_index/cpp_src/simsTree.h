@@ -91,10 +91,11 @@ public:
     class _ThreadSharedContext {
     public:
         _ThreadSharedContext(const SimsNode &root)
-            : root_info(root), parent_work_info(&root_info), index(0)
+            : root_info(root), index(0)
             , interrupt_thread(false)
             , num_working_threads(1)
         {
+            parent_work_info = &root_info;
             root_info.pending_work_infos.push_back(_PendingWorkInfo(root));
         }
         
@@ -103,8 +104,8 @@ public:
         // The next thread needs to pick up
         // parent_work_record->work_records[work_records.size() - 1 - index];
 
-        std::atomic<_PendingWorkInfo*> parent_work_info;
-        std::atomic_int_least32_t index;
+        _PendingWorkInfo* parent_work_info;
+        int32_t index;
   
         // Interrupted thread needs to set parent_work_record to its own _WorkRecord.
         // Set index to work_recors.size() - 1.
@@ -120,6 +121,8 @@ public:
         // Number of working threads + 1 if there is any work on the parent_work_record.
         std::atomic_uint num_working_threads;
 
+        std::mutex m;
+        
         std::mutex out_mutex;
     };
     
