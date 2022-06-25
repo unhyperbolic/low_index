@@ -208,7 +208,7 @@ void
 SimsTree::_thread_worker_new(
     _ThreadSharedContext * ctx) const
 {
-    while(ctx->num_working_threads > 0) {
+    while(true) {
         size_t index;
         size_t n;
         _PendingWorkInfo *parent_work_info = nullptr;
@@ -227,6 +227,11 @@ SimsTree::_thread_worker_new(
             if (index == n) {
                 ctx->num_working_threads--;
             }
+
+            if (ctx->num_working_threads == 0 && index >= n) {
+                break;
+            }
+            
         }
 
         std::vector<_PendingWorkInfo> &current_work_infos =
