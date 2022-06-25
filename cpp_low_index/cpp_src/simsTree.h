@@ -4,6 +4,7 @@
 #include "simsNode.h"
 
 #include <atomic>
+#include <condition_variable>
 
 namespace low_index {
 
@@ -55,7 +56,7 @@ public:
         size_t bloom_size,
         unsigned int thread_num) const;
 
-private:
+public:
     SimsTree(
         const SimsNode &root,
         const std::vector<Relator> &short_relators,
@@ -66,6 +67,62 @@ private:
     void _recurse(
         const StackedSimsNode &n,
         std::vector<SimsNode> *nodes) const;
+
+    class _ThreadSharedContext;
+    class _PendingWorkInfo;
+    
+    void _recurse(
+        _ThreadSharedContext * ctx,
+        const StackedSimsNode &n,
+        _PendingWorkInfo *workInfo) const;
+
+    class _PendingWorkInfo {
+    public:
+        _PendingWorkInfo(const SimsNode &root) : root(root) { }
+        // The node to process.
+        const SimsNode root;
+
+        // Filled in by worker thread with complete nodes.
+        std::vector<SimsNode> complete_nodes;
+        // If worker thread was interrupted, filled with the remaining nodes that need to be processed.
+        std::vector<_PendingWorkInfo> pending_work_infos;
+    };
+
+    class _ThreadSharedContext {
+    public:
+        _ThreadSharedContext(const SimsNode &root)
+            : root_info(root), parent_work_info(&root_info), index(0)
+            , interrupt_thread(false)
+            , num_working_threads(1)
+        {
+            root_info.pending_work_infos.push_back(_PendingWorkInfo(root));
+        }
+        
+        _PendingWorkInfo root_info;
+
+        // The next thread needs to pick up
+        // parent_work_record->work_records[work_records.size() - 1 - index];
+
+        std::atomic<_PendingWorkInfo*> parent_work_info;
+        std::atomic_int_least32_t index;
+  
+        // Interrupted thread needs to set parent_work_record to its own _WorkRecord.
+        // Set index to work_recors.size() - 1.
+        
+        
+        // index-- to pick up next work_record. If index is negative,  
+        // If index == -1, then set interrupt_thread.
+        std::atomic_bool interrupt_thread;
+
+        // Called when thread has added new work_record.
+        std::condition_variable wake_up_threads;
+
+        // Number of working threads + 1 if there is any work on the parent_work_record.
+        std::atomic_uint num_working_threads;
+
+        std::mutex out_mutex;
+    };
+    
     // Enumerate at least n nodes by recursively adding edges to root in a
     // breadth-first search manner. Note that the order in the returned
     // vector is depth-first search though - so consistent with _recurse.
@@ -79,10 +136,17 @@ private:
         const std::vector<SimsNode> &branches,
         std::atomic_size_t * index,
         std::vector<std::vector<SimsNode>> * nested_result) const;
+
+    void _thread_worker_new(
+        _ThreadSharedContext * ctx) const;
+
+    
     
     const std::vector<Relator> _short_relators;
     const std::vector<Relator> _long_relators;
     const SimsNode _root;
+
+    mutable bool was_interrupted;
 };
 
 } // Namespace low_index
