@@ -105,7 +105,7 @@ public:
         // parent_work_record->work_records[work_records.size() - 1 - index];
 
         _PendingWorkInfo* parent_work_info;
-        int32_t index;
+        size_t index;
   
         // Interrupted thread needs to set parent_work_record to its own _WorkRecord.
         // Set index to work_recors.size() - 1.

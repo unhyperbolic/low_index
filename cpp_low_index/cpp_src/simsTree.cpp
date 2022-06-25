@@ -211,22 +211,22 @@ SimsTree::_thread_worker_new(
     while(ctx->num_working_threads > 0) {
         ctx->num_working_threads++;
 
-        int32_t index;
+        size_t index;
         _PendingWorkInfo *parent_work_info = nullptr;
         
         {
             std::unique_lock<std::mutex> lk(ctx->m);
-            index = ctx->index--;
+            index = ctx->index++;
             parent_work_info = ctx->parent_work_info;
         }
-            
-        if (index >= 0) {
-            std::vector<_PendingWorkInfo> &current_work_infos =
+
+        std::vector<_PendingWorkInfo> &current_work_infos =
                 parent_work_info->pending_work_infos;
 
+        if (index < current_work_infos.size()) {
+
             _PendingWorkInfo &current_work_info =
-                current_work_infos[
-                    current_work_infos.size() - 1 - index];
+                current_work_infos[index];
             SimsTree tree(current_work_info.root, _short_relators, _long_relators);
             tree.was_interrupted = false;
             SimsNodeStack stack(current_work_info.root);
@@ -250,19 +250,19 @@ SimsTree::_thread_worker_new(
                     }
                     
                 
-                    ctx->index = current_work_info.pending_work_infos.size() - 1;
+                    ctx->index = 0;
                 }
 
 //                ctx->wake_up_threads.notify_all();
             }
         }
         ctx->num_working_threads--;
-        if (index == -1) {
+        if (index == current_work_infos.size()) {
             ctx->num_working_threads--;
             ctx->interrupt_thread.exchange(true);
 //            ctx->wake_up_threads.notify_all();
         }
-        if (index < 0) {
+        if (index > current_work_infos.size()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             
 //            std::mutex m;
