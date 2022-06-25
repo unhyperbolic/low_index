@@ -226,8 +226,8 @@ SimsTree::_thread_worker_new(
             }
             if (index == n) {
 //                ctx->num_working_threads--;
+                        ctx->interrupt_thread.exchange(true);
             }
-
             
             if (ctx->num_working_threads == 0 && index >= n) {
                 break;
@@ -268,7 +268,7 @@ SimsTree::_thread_worker_new(
 //            ctx->wake_up_threads.notify_all();
         }
         if (index == current_work_infos.size()) {
-            ctx->interrupt_thread.exchange(true);
+//            ctx->interrupt_thread.exchange(true);
 //            ctx->wake_up_threads.notify_all();
         }
         if (index > current_work_infos.size()) {
