@@ -259,18 +259,18 @@ SimsTree::_thread_worker_new(
                 }
             }
             ctx->num_working_threads--;
-            ctx->wake_up_threads.notify_all();
+//            ctx->wake_up_threads.notify_all();
         }
         if (index == current_work_infos.size()) {
             ctx->interrupt_thread.exchange(true);
-            ctx->wake_up_threads.notify_all();
+//            ctx->wake_up_threads.notify_all();
         }
         if (index > current_work_infos.size()) {
-//            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
             
 //            std::mutex m;
-            std::unique_lock<std::mutex> lk(ctx->m);
-            ctx->wake_up_threads.wait(lk);
+//            std::unique_lock<std::mutex> lk(ctx->x);
+//            ctx->wake_up_threads.wait(lk);
         }
     }
 }
