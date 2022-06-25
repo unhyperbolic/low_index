@@ -91,11 +91,11 @@ public:
     class _ThreadSharedContext {
     public:
         _ThreadSharedContext(const SimsNode &root)
-            : root_info(root), index(0)
+            : root_info(root),
+              index(0)
             , interrupt_thread(false)
             , num_working_threads(0)
         {
-            parent_work_info = &root_info;
             root_info.pending_work_infos.push_back(_PendingWorkInfo(root));
             work_infos = &root_info.pending_work_infos;
         }
@@ -104,8 +104,6 @@ public:
 
         // The next thread needs to pick up
         // parent_work_record->work_records[work_records.size() - 1 - index];
-
-        _PendingWorkInfo* parent_work_info;
         std::vector<_PendingWorkInfo> *work_infos;
         size_t index;
   

@@ -23,10 +23,12 @@ A C++ reimplementation of `low_index`.
 )pbdoc";
 
     addLowIndex(m);
+    /*
     addCoveringSubgraph(m);
     addAbstractSimsNode(m);
     addSimsNode(m);
     addSimsTree(m);
+    */
 
     m.def("hardware_concurrency",
           &std::thread::hardware_concurrency);
