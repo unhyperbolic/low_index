@@ -73,7 +73,7 @@ SimsTreeMultiThreaded::_recurse(
         }
 
         if (!c->was_interrupted) {
-            if (!n.is_complete() && c->shared_ctx->interrupt_thread.exchange(false)) {
+            if (!n.is_complete() && _recursion_stop_requested.exchange(false)) {
                 c->was_interrupted = true;
             }
         }
@@ -87,8 +87,7 @@ SimsTreeMultiThreaded::_recurse(
 }
 
 void
-SimsTreeMultiThreaded::_thread_worker(
-    _ThreadSharedContext * ctx)
+SimsTreeMultiThreaded::_thread_worker()
 {
     while(true) {
         size_t index;
@@ -96,41 +95,41 @@ SimsTreeMultiThreaded::_thread_worker(
 
         {
             std::unique_lock<std::mutex> lk(_mutex);
-            index = ctx->index;
+            index = _node_index;
 
             const size_t n = _nodes->size();
 
             if (index < n) {
                 _num_working_threads++;
-                ctx->index++;
+                _node_index++;
                 nodes = _nodes;
             } else {
                 if (index == n) {
-                    ctx->index++;
-                    ctx->interrupt_thread.exchange(true);
+                    _node_index++;
+                    _recursion_stop_requested.exchange(true);
                 }
 
                 if (_num_working_threads == 0) {
-                    ctx->wake_up_threads.notify_all();
+                    _wake_up_threads.notify_all();
                     break;
                 }
 
-                ctx->wake_up_threads.wait(lk);
+                _wake_up_threads.wait(lk);
             }
         }
 
         if (nodes) {
             _Node &node = (*nodes)[index];
             SimsNodeStack stack(node.root);
-            _ThreadContext c(ctx, &node);
+            _ThreadContext c(&node);
             _recurse(stack.get_node(), &node, &c);
             if (c.was_interrupted) {
                 std::unique_lock<std::mutex> lk(_mutex);
                 _nodes = &node.children;
-                ctx->index = 0;
+                _node_index = 0;
             }
             _num_working_threads--;
-            ctx->wake_up_threads.notify_all();
+            _wake_up_threads.notify_all();
         }
     }
 }
@@ -138,17 +137,13 @@ SimsTreeMultiThreaded::_thread_worker(
 std::vector<SimsNode>
 SimsTreeMultiThreaded::list()
 {
-    _ThreadSharedContext ctx(_root);
-
     std::vector<_Node> root_nodes{_Node(_root)};
     _nodes = &root_nodes;
     
     std::vector<std::thread> threads;
     threads.reserve(_thread_num);
     for (unsigned int i = 0; i < _thread_num; i++) {
-        threads.emplace_back(
-            &SimsTreeMultiThreaded::_thread_worker,
-            this, &ctx);
+        threads.emplace_back(&SimsTreeMultiThreaded::_thread_worker, this);
     }
 
     for (std::thread &t : threads) {

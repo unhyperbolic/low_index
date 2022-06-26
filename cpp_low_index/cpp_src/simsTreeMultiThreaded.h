@@ -61,41 +61,20 @@ public:
         std::vector<_Node> children;
     };
 
-    /*
-    class _ThreadSharedContext {
-    public:
-        _ThreadSharedContext(const SimsNode &root)
-            : index(0)
-            , interrupt_thread(false)
-        {
-        }
-
-        size_t index;
-
-        std::atomic_bool interrupt_thread;
-
-        std::condition_variable wake_up_threads;
-    };
-    */
-
     class _ThreadContext {
     public:
         _ThreadContext(
-                _ThreadSharedContext * const shared_ctx,
                 _Node * const work_info)
-          : shared_ctx(shared_ctx)
-          , work_info(work_info)
+          : work_info(work_info)
           , was_interrupted(false)
         {
         }
 
-        _ThreadSharedContext * const shared_ctx;
         _Node * const work_info;
         bool was_interrupted;
     };
 
-    void _thread_worker(
-        _ThreadSharedContext * ctx);
+    void _thread_worker();
 
     void _recurse(
         const StackedSimsNode &n,
