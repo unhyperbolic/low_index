@@ -48,13 +48,9 @@ public:
     std::vector<SimsNode> list() override;
 
 public:
-    class _ThreadSharedContext;
-    class _PendingWorkInfo;
-    class _ThreadContext;
-
-    class _PendingWorkInfo {
+    class _Node {
     public:
-        _PendingWorkInfo(const SimsNode &root) : root(root) { }
+        _Node(const SimsNode &root) : root(root) { }
         // The node to process.
         const SimsNode root;
 
@@ -62,13 +58,13 @@ public:
         std::vector<SimsNode> complete_nodes;
         // Filled by worker thread with nodes that still need to be
         // recursed if worker thread was prompted to stop recursing.
-        std::vector<_PendingWorkInfo> children;
+        std::vector<_Node> children;
     };
 
     class _ThreadSharedContext {
     public:
         _ThreadSharedContext(const SimsNode &root)
-            : root_infos{_PendingWorkInfo(root)}
+            : root_infos{_Node(root)}
             , work_infos(&root_infos)
             , index(0)
             , interrupt_thread(false)
@@ -76,9 +72,9 @@ public:
         {
         }
 
-        std::vector<_PendingWorkInfo> root_infos;
+        std::vector<_Node> root_infos;
 
-        std::vector<_PendingWorkInfo> *work_infos;
+        std::vector<_Node> *work_infos;
         size_t index;
 
         std::atomic_bool interrupt_thread;
@@ -87,43 +83,21 @@ public:
 
         std::atomic_uint num_working_threads;
 
-        std::mutex m;
     };
 
     class _ThreadContext {
     public:
         _ThreadContext(
                 _ThreadSharedContext * const shared_ctx,
-                _PendingWorkInfo * const work_info)
+                _Node * const work_info)
           : shared_ctx(shared_ctx)
           , work_info(work_info)
           , was_interrupted(false)
         {
         }
 
-        bool should_recurse(const AbstractSimsNode &n) {
-            if (was_interrupted) {
-                work_info->children.push_back(
-                    _PendingWorkInfo(n));
-                return false;
-            }
-
-            if (n.is_complete()) {
-                return true;
-            }
-
-            if (shared_ctx->interrupt_thread.exchange(false)) {
-                was_interrupted = true;
-                work_info->children.push_back(
-                    _PendingWorkInfo(n));
-                return false;
-            }
-
-            return true;
-        }
-
         _ThreadSharedContext * const shared_ctx;
-        _PendingWorkInfo * const work_info;
+        _Node * const work_info;
         bool was_interrupted;
     };
 
@@ -136,6 +110,8 @@ public:
         _ThreadContext * c = nullptr);
 
     const unsigned int _thread_num;
+
+    std::mutex _mutex;
 };
 
 } // Namespace low_index

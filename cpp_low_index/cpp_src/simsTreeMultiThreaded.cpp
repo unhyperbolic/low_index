@@ -24,7 +24,7 @@ SimsTreeMultiThreaded::SimsTreeMultiThreaded(
 static
 void
 _merge_vectors(
-    const std::vector<SimsTreeMultiThreaded::_PendingWorkInfo> &infos,
+    const std::vector<SimsTreeMultiThreaded::_Node> &infos,
     std::vector<SimsNode> * result)
 {
     for (const auto &info : infos) {
@@ -67,9 +67,17 @@ SimsTreeMultiThreaded::_recurse(
         if (!new_subgraph.may_be_minimal()) {
             continue;
         }
-        if (c && !c->should_recurse(new_subgraph)) {
+
+        if (!c->was_interrupted) {
+            if (!n.is_complete() && c->shared_ctx->interrupt_thread.exchange(false)) {
+                c->was_interrupted = true;
+            }
+        }
+        if (c->was_interrupted) {
+            c->work_info->children.push_back(_Node(new_subgraph));
             continue;
         }
+
         _recurse(new_subgraph, result, c);
     }
 }
@@ -80,10 +88,10 @@ SimsTreeMultiThreaded::_thread_worker(
 {
     while(true) {
         size_t index;
-        std::vector<_PendingWorkInfo> * work_infos = nullptr;
+        std::vector<_Node> * work_infos = nullptr;
 
         {
-            std::unique_lock<std::mutex> lk(ctx->m);
+            std::unique_lock<std::mutex> lk(_mutex);
             index = ctx->index;
 
             const size_t n = ctx->work_infos->size();
@@ -108,12 +116,12 @@ SimsTreeMultiThreaded::_thread_worker(
         }
 
         if (work_infos) {
-            _PendingWorkInfo &work_info = (*work_infos)[index];
+            _Node &work_info = (*work_infos)[index];
             SimsNodeStack stack(work_info.root);
             _ThreadContext c(ctx, &work_info);
             _recurse(stack.get_node(), &work_info.complete_nodes, &c);
             if (c.was_interrupted) {
-                std::unique_lock<std::mutex> lk(ctx->m);
+                std::unique_lock<std::mutex> lk(_mutex);
                 ctx->work_infos = &work_info.children;
                 ctx->index = 0;
             }
