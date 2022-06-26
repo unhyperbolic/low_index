@@ -80,8 +80,8 @@ SimsTreeMultiThreaded::_thread_worker()
 
         {
             std::unique_lock<std::mutex> lk(_mutex);
-            index = _node_index;
 
+            index = _node_index;
             const size_t n = _nodes->size();
 
             if (index < n) {
@@ -89,13 +89,13 @@ SimsTreeMultiThreaded::_thread_worker()
                 _node_index++;
                 nodes = _nodes;
             } else {
+                if (_num_working_threads == 0) {
+                    break;
+                }
+
                 if (index == n) {
                     _node_index++;
                     _recursion_stop_requested = true;
-                }
-
-                if (_num_working_threads == 0) {
-                    break;
                 }
 
                 _wake_up_threads.wait(lk);
