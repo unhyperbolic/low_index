@@ -2,10 +2,15 @@
 \usepackage[width=6.5in,height=10in]{geometry}
 \usepackage{tgpagella}
 \usepackage{amsthm}
+\usepackage{amsmath}
 \usepackage{amsrefs}
+
 \parindent 0pt 
 \parskip 1ex
 \newtheorem{theorem}{Theorem}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\renewcommand{\tilde}{\widetilde}
 \begin{document}
 \normalfont
 \title{LOW~INDEX, Revisited and Implemented}
@@ -46,7 +51,7 @@ written in C++ and wrapped using pybind-11.  The package uses parallel
 computation for optimal speed, but it is actually faster than the
 implementations mentioned above even when restricted to a single CPU.
 
-\section{Covering Spaces and Conjugacy Classes}
+\section{Covering Spaces and Conjugacy Classes}\label{covers}
 
 We review the two theorems about covering spaces that will be used in this note.
 The first is what Massey calls the existence theorem for covering spaces.  It
@@ -82,11 +87,12 @@ with respect to some choice of base point.
   exactly a conjugacy class in $\pi_1(X, x)$.
   \end{thm}
 
-  We are interested in enumerating all conjugacy classes of finite index subgroups
-  of a given finitely presented group $G$ which have index at most $N$.  For a covering map
-  $p:(\tilde X, \tilde x)\to (X, x)$, the index of $p_*(\pi_1(\tilde X, \tilde x))$
-  in $\pi_1(X, x)$ is equal to the degree of the covering.  So our enumeration
-  task can be divided into the following subtasks:
+  We are interested in enumerating all conjugacy classes of finite index
+  subgroups of a given finitely presented group $G$ which have index at most
+  $N$.  For a covering map $p:(\tilde X, \tilde x)\to (X, x)$, the index of
+  $p_*(\pi_1(\tilde X, \tilde x))$ in $\pi_1(X, x)$ is equal to the degree of
+  the covering.  So our enumeration task can be divided into the following
+  subtasks:
 
   \begin{itemize}
   \item Construct a CW-complex $X$ with base vertex $x$ such that
@@ -219,14 +225,15 @@ with respect to some choice of base point.
    $N = N_v$ be the contractible open neighborhood of $v$ given by
    $N = B - \{p_1, \ldots, p_r\}$.
 
-   A {\it covering subgraph} $C$ of $B$ with degree $d$ is a topological space
-   constructed from a degree $d$ covering map $p:\tilde B \to B$ where the edges
-   of $\tilde B$ are oriented and labeled by lifting the labels and orientations
-   from $B$.  The space $C$ is given as $\tilde B - P$ where $P$ is some subset
-   of $p^{-1}(\{p_1, \ldots, p_r\})$.  The vertices of $C$ are labeled by integers
-   in $\{1, \ldots, d}$.  Two covering subgraphs are isomorphic if there is a
-   homeomorphism between them which preserverses labels of vertices and edges
-   and preserves the orientations of the edges.
+   A {\it covering subgraph} $C$ of $B$ with degree $d$ is a connecte
+   topological space constructed from a degree $d$ covering map
+   $p:\tilde B \to B$ where the edges of $\tilde B$ are oriented and labeled by
+   lifting the labels and orientations from $B$.  The space $C$ is given as
+   $\tilde B - P$ where $P$ is some subset of $p^{-1}(\{p_1, \ldots, p_r\})$.
+   The vertices of $C$ are labeled by integers in $\{1, \ldots, d\}$.  Two
+   covering subgraphs are isomorphic if there is a homeomorphism between them
+   which preserverses labels of vertices and edges and preserves the orientations
+   of the edges.
 
    Abstractly, a covering subgraph can be constructed from a disjoint union of
    $d$ copies of $N$, named $N_1, \ldots, N_d$, by adding at most $rd$ oriented
@@ -241,7 +248,7 @@ with respect to some choice of base point.
    complement of a point in the open edge.  After making these identifications
    the covering subgraph will have an edge labeled $i$ from the vertex $v_m$ to
    the vertex $v_n$.  It is required, of course, that each slot be used by at
-   most one edge.
+   most one edge and that the resulting space be connected.
 
    It is immediate from the first description that a covering subgraph $C$ of
    $B$ with degree $d$ admits a local homeomorphism to $B$, such that the local
@@ -252,8 +259,93 @@ with respect to some choice of base point.
    it, i.e. if a point has been removed from the edge in $\tilde B$ containing
    it.
 
+   In order to implement Sims' algorithm we need a completely combinatorial
+   description of a covering subgraph which, as it turns out, is readily available.
+   A covering subgraph is completely described by specifying the initial and
+   terminal vertices of each of its edges.  This information can be encoded in
+   the {\it outgoing matrix} of the covering subgraph, which is the $r\times d$
+   matrix $\mathop{Out(C)} = (a_{ij})$ defined as follows:
+   \[ a_{ij} =
+     \begin{cases}
+       k & \text{if there is an edge of $C$ labeled $j$ from $v_i$ to $v_k$}\\
+       0 & \text{otherwise}\\
+     \end{cases}
+   \]
+ The analagous $r\times d$ {\it incoming matrix} $\mathop{In(C)} =
+ (a_{ij})$ is defined by
+   \[ a_{ij} =
+     \begin{cases}
+       k & \text{if there is an edge of $C$ labeled $j$ from $v_k$ to $v_i$}\\
+       0 & \text{otherwise}\\
+     \end{cases}
+   \]
+   Either of these matrices describes the covering subgraph, and each can be
+   derived from the other.  However, our implementation of Sims' algorithm
+   actually records both of them, in order to make the process of lifting
+   relators more efficient.  This pair of matrices is equivalent to the
+   ``transition matrix'' that appears in Sims' description of his algorithm, and
+   to the ``coset table'' that appears in some other descriptions of his
+   algorithm.
+       
    \subsection{The Canonical Base Point}
+   As was mentioned in Section \ref{covers} our scheme for enumerating all
+   conjugacy class of subgroups of index $N$ requires that there be a canonical
+   choice of base point for each finite covering space $\tilde B$ of the CW
+   complex $B$ with $1$ vertex and $r$ directed labeled edges
+   $e_1, \ldots, e_r$.  In this subsection we will describe how to characterize
+   the canonical base point for such a cover.
 
+   So far, each degree $d$ covering space of $B$ that we have discussed has had
+   labeled vertices with labels $1, \ldots, d$.  But these labels were
+   arbitrary.  The first step in describing the canonical base point is to
+   observe that each choice of a base vertex $v_1$ in $\tilde B$ determines a
+   natural labeling of all of the vertices of $\tilde B$ such that $v_1$ has
+   label $1$.  This natural labeling is produced by the following inductive
+   procedure which also generates a sequence of covering subgraphs
+   $C_1, C_2, \ldots, C_{rd} = \tilde B$ such that $C_{i+1}$ is constructed from
+   $C_i$ by adding a single edge and such that each vertex of $C_i$ has the same
+   label $C_{i+1}$ as it had in $C_i$. Recall that we have defined an ordering
+   of the slots of a covering subgraph with labeled vertices.
+   \begin{itemize}
+   \item $C_1$ consists of the vertex $v_1$ and has no edges.
+   \item For $j > 1$ let the first empty slot $s$ in $C_j$ have label $(i, l)$.
+     If $l > 0$ then construct $C_{i+1}$ from $C_i$ by adding the edge $e$
+     of $\tilde B$ whose initial slot is $s$.  If $l < 0$ then construct
+     $C_{i+1}$ from $C_i$ by adding the edge $e$ of $\tilde B$ whose terminal
+     slot is $s$.  If there is a vertex of $C_{i+1}$ which is not a vertex of $C_i$ then
+     assign it the label $1 + V$ where $V$ is the number of vertices of $C_i$.
+   \end{itemize}
+
+   Next suppose that we are given a finite cover $\tilde B$ of $B$ with an
+   arbitrary labeling of its vertices.  Given a slot $s$ with label $(n, l)$ let
+   $E_s$ denote the edge of $\tilde B$ containing $s$.  If $l > 0$ then $E_s$ is an
+   outgoing edge at the vertex with label $n$ and we let $V_s$ denote the
+   label of the terminal vertex of $E_s$.  If $l < 0$ then $E_s$ is an incoming
+   edge at the vertex labeled $n$ and we let $V_s$ denote the label of the
+   initial vertex of $E_s$.  We may then define the {\it complexity} of our
+   vertex labeling to be the tuple of positive numbers $(V_s)$ indexed by the
+   (ordered) slots in $\tilde B$.  The complexities are ordered
+   lexicographically.
+
+   \begin{definition}
+     A vertex $v$ of a finite covering space $\tilde B$ is {\it canonical} if
+     $v$ has minimal complexity among all vertices of $\tilde B$.
+   \end{definition}
+
+   There are two observations to make here.  First, the complexity is an
+   invariant of the isomorphism class of the based covering.  That is, if two
+   vertices $v$ and $w$ generate the same labeling then there is an isomorphism
+   of based coverings from $(\tilde B, v)$ to $(\tilde B, w)$.  Second, the
+   complexity makes sense for a covering subgraph which is not complete,
+   if we extend the definition by defining $V_s$ to be $0$ if the slot $s$ is empty.
+
+   The last observation plays a key r\^ole in the algorithm.  It means that it
+   is possible to determine that a vertex of a covering subgraph could not
+   possibly be canonical in any complete covering subgraph obtained by adding
+   additional edges.  This conclusion follows when the (extended) complexity of
+   the vertex is not minimal among the complexities of all vertices of the
+   covering subgraph.
+   
 \section{Description of the Algorithm}
    \subsection{Permutation Representations}
    \subsection{The Sims Tree}
