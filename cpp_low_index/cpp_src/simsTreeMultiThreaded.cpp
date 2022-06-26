@@ -26,7 +26,7 @@ SimsTreeMultiThreaded::SimsTreeMultiThreaded(
 void
 SimsTreeMultiThreaded::_recurse(
     const StackedSimsNode &n,
-    _Node * result)
+    _Node * const result)
 {
     if(n.is_complete()) {
         if (!n.relators_lift(_long_relators)) {
@@ -116,17 +116,16 @@ SimsTreeMultiThreaded::_thread_worker()
     }
 }
 
-static
 void
-_merge_vectors(
-    const std::vector<SimsTreeMultiThreaded::_Node> &infos,
-    std::vector<SimsNode> * result)
+SimsTreeMultiThreaded::_merge_vectors(
+    const std::vector<_Node> &nodes,
+    std::vector<SimsNode> * const result)
 {
-    for (const auto &info : infos) {
-        for (const SimsNode &n : info.complete_nodes) {
-            result->push_back(n);
+    for (const auto &node : nodes) {
+        for (const SimsNode &complete_node : node.complete_nodes) {
+            result->push_back(complete_node);
         }
-        _merge_vectors(info.children, result);
+        _merge_vectors(node.children, result);
     }
 }
 

@@ -5,8 +5,6 @@
 
 namespace low_index {
 
-class StackedSimsNode;
-
 /// A class to recursively add edges to a SimsNode to find all covering
 /// subgraphs up to a certain degree such that the given relators lift.
 ///
@@ -32,7 +30,7 @@ public:
     std::vector<SimsNode> list() override;
 
 private:
-    void _recurse(const StackedSimsNode &n);
+    void _recurse(const class StackedSimsNode &n);
 
     std::vector<SimsNode> _complete_nodes;
 };
