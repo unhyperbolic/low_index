@@ -21,12 +21,6 @@ SimsTreeMultiThreaded::SimsTreeMultiThreaded(
 {
 }
 
-std::vector<SimsNode>
-SimsTreeMultiThreaded::list()
-{
-    return _list_multi_threaded(_thread_num);
-}
-
 static
 void
 _merge_vectors(
@@ -130,14 +124,13 @@ SimsTreeMultiThreaded::_thread_worker(
 }
 
 std::vector<SimsNode>
-SimsTreeMultiThreaded::_list_multi_threaded(
-    const unsigned int thread_num)
+SimsTreeMultiThreaded::list()
 {
     _ThreadSharedContext ctx(_root);
 
     std::vector<std::thread> threads;
-    threads.reserve(thread_num);
-    for (unsigned int i = 0; i < thread_num; i++) {
+    threads.reserve(_thread_num);
+    for (unsigned int i = 0; i < _thread_num; i++) {
         threads.emplace_back(
             &SimsTreeMultiThreaded::_thread_worker,
             this, &ctx);

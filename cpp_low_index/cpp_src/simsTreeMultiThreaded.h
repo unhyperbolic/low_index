@@ -127,9 +127,6 @@ public:
         bool was_interrupted;
     };
 
-    std::vector<SimsNode> _list_multi_threaded(
-        unsigned int thread_num);
-
     void _thread_worker(
         _ThreadSharedContext * ctx);
 
@@ -138,7 +135,7 @@ public:
         std::vector<SimsNode> * result,
         _ThreadContext * c = nullptr);
 
-    unsigned int _thread_num;
+    const unsigned int _thread_num;
 };
 
 } // Namespace low_index
