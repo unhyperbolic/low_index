@@ -88,32 +88,35 @@ SimsTree::_recurse(
     _ThreadContext * c) const
 {
     if(n.is_complete()) {
-        if (n.relators_lift(_long_relators)) {
-            SimsNode copy(n);
-            if (copy.relators_may_lift(_short_relators)) {
-                result->push_back(std::move(copy));
-            }
+        if (!n.relators_lift(_long_relators)) {
+            return;
         }
-    } else {
-        const std::pair<LetterType, DegreeType> slot =
-            n.first_empty_slot();
-        const DegreeType m =
-            std::min<DegreeType>(
-                n.degree() + 1,
-                n.max_degree());
-        for (DegreeType v = 1; v <= m; v++) {
-            if (n.act_by(-slot.first, v) == 0) {
-                StackedSimsNode new_subgraph(n);
-                new_subgraph.add_edge(slot.first, slot.second, v);
-                if (new_subgraph.relators_may_lift(_short_relators)) {
-                    if (new_subgraph.may_be_minimal()) {
-                        if (!c || c->should_recurse(new_subgraph)) {
-                            _recurse(new_subgraph, result, c);
-                        }
-                    }
-                }
-            }
+        SimsNode copy(n);
+        if (!copy.relators_may_lift(_short_relators)) {
+            return;
         }
+        result->push_back(std::move(copy));
+        return;
+    }
+
+    const std::pair<LetterType, DegreeType> slot = n.first_empty_slot();
+    const DegreeType m = std::min<DegreeType>(n.degree() + 1, n.max_degree());
+    for (DegreeType v = 1; v <= m; v++) {
+        if (n.act_by(-slot.first, v) != 0) {
+            continue;
+        }
+        StackedSimsNode new_subgraph(n);
+        new_subgraph.add_edge(slot.first, slot.second, v);
+        if (!new_subgraph.relators_may_lift(_short_relators)) {
+            continue;
+        }
+        if (!new_subgraph.may_be_minimal()) {
+            continue;
+        }
+        if (c && !c->should_recurse(new_subgraph)) {
+            continue;
+        }
+        _recurse(new_subgraph, result, c);
     }
 }
 
