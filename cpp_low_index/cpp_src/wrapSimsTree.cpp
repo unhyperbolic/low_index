@@ -8,7 +8,7 @@
 namespace low_index {
 
 void addSimsTree(pybind11::module_ &m) {
-    pybind11::class_<SimsTree, SimsTreeBasis>(
+    pybind11::class_<SimsTree, SimsTreeBase>(
             m, "SimsTree", DOC(low_index, SimsTree))
         .def(pybind11::init<RankType,
                             DegreeType,

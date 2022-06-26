@@ -1,21 +1,19 @@
-#ifndef LOW_INDEX_SIMS_TREE_BASIS_H
-#define LOW_INDEX_SIMS_TREE_BASIS_H
+#ifndef LOW_INDEX_SIMS_TREE_BASE_H
+#define LOW_INDEX_SIMS_TREE_BASE_H
 
 #include "simsNode.h"
 
 namespace low_index {
 
-// Should be SimStreeBase!!!
-    
-class SimsTreeBasis
+class SimsTreeBase
 {
 public:
     std::vector<SimsNode> list() { return _list(); }
 
-    virtual ~SimsTreeBasis() = default;
+    virtual ~SimsTreeBase() = default;
     
 protected:
-    SimsTreeBasis(
+    SimsTreeBase(
         RankType rank,
         DegreeType max_degree,
         const std::vector<Relator> &short_relators,

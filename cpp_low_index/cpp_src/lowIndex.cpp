@@ -233,7 +233,7 @@ permutation_reps(
 
     std::vector<std::vector<std::vector<DegreeType>>> result;
 
-    std::unique_ptr<SimsTreeBasis> t;
+    std::unique_ptr<SimsTreeBase> t;
 
     const unsigned int resolved_thread_num =
         (thread_num > 0)

@@ -1,7 +1,7 @@
 #ifndef LOW_INDEX_SIMS_TREE_MULTI_THREADED_H
 #define LOW_INDEX_SIMS_TREE_MULTI_THREADED_H
 
-#include "simsTreeBasis.h"
+#include "simsTreeBase.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -22,7 +22,7 @@ namespace low_index {
 /// The class only stores the root of the tree that is to be visited
 /// recursively.
 ///
-class SimsTreeMultiThreaded : public SimsTreeBasis
+class SimsTreeMultiThreaded : public SimsTreeBase
 {
 public:
     /// Construct SimsTreeMultiThreaded with an empty root.
@@ -39,8 +39,7 @@ public:
 protected:
     std::vector<SimsNode> _list() override;
 
-    // Should be private.
-public:
+private:
     class _Node {
     public:
         _Node(const SimsNode &root)

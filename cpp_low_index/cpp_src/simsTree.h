@@ -1,7 +1,7 @@
 #ifndef LOW_INDEX_SIMS_TREE_H
 #define LOW_INDEX_SIMS_TREE_H
 
-#include "simsTreeBasis.h"
+#include "simsTreeBase.h"
 
 namespace low_index {
 
@@ -16,7 +16,7 @@ namespace low_index {
 /// recursively adding edges and the long_relators only once the covering
 /// subgraph is complete.
 ///
-class SimsTree : public SimsTreeBasis
+class SimsTree : public SimsTreeBase
 {
 public:
     /// Construct SimsTree with an empty root.

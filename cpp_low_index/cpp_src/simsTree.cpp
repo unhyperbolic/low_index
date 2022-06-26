@@ -8,7 +8,7 @@ SimsTree::SimsTree(
     const DegreeType max_degree,
     const std::vector<Relator> &short_relators,
     const std::vector<Relator> &long_relators)
-  : SimsTreeBasis(rank, max_degree, short_relators, long_relators)
+  : SimsTreeBase(rank, max_degree, short_relators, long_relators)
 {
 }
 

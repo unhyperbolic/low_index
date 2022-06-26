@@ -16,7 +16,7 @@ sources = [
     "cpp_src/wrapCoveringSubgraph.cpp",
     "cpp_src/wrapAbstractSimsNode.cpp",
     "cpp_src/wrapSimsNode.cpp",
-    "cpp_src/wrapSimsTreeBasis.cpp",
+    "cpp_src/wrapSimsTreeBase.cpp",
     "cpp_src/wrapSimsTree.cpp",
     "cpp_src/wrapSimsTreeMultiThreaded.cpp",
     "cpp_src/wrapLowIndex.cpp",

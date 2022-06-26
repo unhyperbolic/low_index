@@ -12,7 +12,7 @@ SimsTreeMultiThreaded::SimsTreeMultiThreaded(
     const std::vector<Relator> &short_relators,
     const std::vector<Relator> &long_relators,
     const unsigned int thread_num)
-  : SimsTreeBasis(rank, max_degree, short_relators, long_relators)
+  : SimsTreeBase(rank, max_degree, short_relators, long_relators)
   , _thread_num(thread_num)
   , _nodes(nullptr)
   , _node_index(0)
