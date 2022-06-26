@@ -88,8 +88,10 @@ SimsTreeMultiThreaded::_thread_worker()
 
                 lk.unlock();
                 _Node &node = nodes[index];
-                SimsNodeStack stack(node.root);
-                _recurse(stack.get_node(), &node);
+                {
+                    SimsNodeStack stack(node.root);
+                    _recurse(stack.get_node(), &node);
+                }
                 const bool has_children = !node.children.empty();
                 lk.lock();
 
