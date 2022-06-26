@@ -91,11 +91,10 @@ SimsTreeMultiThreaded::_thread_worker()
             } else {
                 if (index == n) {
                     _node_index++;
-                    _recursion_stop_requested.exchange(true);
+                    _recursion_stop_requested = true;
                 }
 
                 if (_num_working_threads == 0) {
-                    _wake_up_threads.notify_all();
                     break;
                 }
 
