@@ -75,19 +75,37 @@ void
 SimsTreeMultiThreaded::_thread_worker()
 {
     while(true) {
-        size_t index;
-        std::vector<_Node> * nodes = nullptr;
-
         {
             std::unique_lock<std::mutex> lk(_mutex);
 
-            index = _node_index;
+            const size_t index = _node_index;
             const size_t n = _nodes->size();
 
             if (index < n) {
                 _num_working_threads++;
                 _node_index++;
-                nodes = _nodes;
+                std::vector<_Node> &nodes = *_nodes;
+
+                lk.unlock();
+                _Node &node = nodes[index];
+                SimsNodeStack stack(node.root);
+                _recurse(stack.get_node(), &node);
+                const bool has_children = !node.children.empty();
+                lk.lock();
+
+                if (has_children) {
+                    _nodes = &node.children;
+                    _node_index = 0;
+                }
+
+                _num_working_threads--;
+                
+                if (has_children) {
+                    _wake_up_threads.notify_all();
+                } else if (_num_working_threads == 0) {
+                    _wake_up_threads.notify_all();
+                    break;
+                }
             } else {
                 if (_num_working_threads == 0) {
                     break;
@@ -99,24 +117,6 @@ SimsTreeMultiThreaded::_thread_worker()
                 }
 
                 _wake_up_threads.wait(lk);
-            }
-        }
-
-        if (nodes) {
-            _Node &node = (*nodes)[index];
-            SimsNodeStack stack(node.root);
-            _recurse(stack.get_node(), &node);
-            const bool has_children = !node.children.empty();
-            {
-                std::unique_lock<std::mutex> lk(_mutex);
-                if (has_children) {
-                    _nodes = &node.children;
-                    _node_index = 0;
-                }
-                _num_working_threads--;
-                if (has_children || _num_working_threads == 0) {
-                    _wake_up_threads.notify_all();
-                }
             }
         }
     }
