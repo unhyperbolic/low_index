@@ -94,16 +94,17 @@ def run_example_low_level(ex):
                 for w in ex['short relators'] + ex['long relators']],
             max_degree = ex['index'],
             num_long_relators = ex['num_long']))
-    tree = cpp_low_index._low_index.SimsTree(
+    tree = cpp_low_index._low_index.SimsTreeMultiThreaded(
         rank = ex['rank'],
         max_degree = ex['index'],
         short_relators = short_relators,
-        long_relators = long_relators)
+        long_relators = long_relators,
+        thread_num = 10)
     # thread_num = 0 makes SimsTree determine the number of
     # threads by using std::thread::hardware_concurrency()
     return len(tree.list())
 
-use_low_level = False
+use_low_level = True
 
 def run(ex):
     print('%s; index = %d.'%(ex['group'], ex['index']))

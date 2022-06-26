@@ -1,7 +1,5 @@
-#include <iostream>
-#include <chrono>
-
 #include "simsTreeMultiThreaded.h"
+
 #include "stackedSimsNode.h"
 
 #include <thread>
@@ -133,7 +131,7 @@ SimsTreeMultiThreaded::_merge_vectors(
 }
 
 std::vector<SimsNode>
-SimsTreeMultiThreaded::list()
+SimsTreeMultiThreaded::_list()
 {
     std::vector<_Node> root_nodes{_Node(_root)};
     _nodes = &root_nodes;

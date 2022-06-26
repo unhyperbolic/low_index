@@ -13,7 +13,7 @@ SimsTree::SimsTree(
 }
 
 std::vector<SimsNode>
-SimsTree::list()
+SimsTree::_list()
 {
     SimsNodeStack stack(_root);
     _recurse(stack.get_node());

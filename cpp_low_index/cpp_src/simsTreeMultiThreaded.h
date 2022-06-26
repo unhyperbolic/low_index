@@ -36,15 +36,10 @@ public:
 
     /// Find all complete covering subgraphs for which all relators lift.
     /// The parameters do not affect the result, but do affect the performance.
-    ///
-    /// The number of threads can be determined automatically to match the
-    /// number of CPU cores (using std::thread::hardware_concurrency()) by
-    /// setting thread_num = 0. To force a certain number of threads,
-    /// set thread_num to a positive value. In particular, setting
-    /// thread_num = 1 forces the single-threaded execution.
-    ///
-    std::vector<SimsNode> list() override;
+protected:
+    std::vector<SimsNode> _list() override;
 
+    // Should be private.
 public:
     class _Node {
     public:

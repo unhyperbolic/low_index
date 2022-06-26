@@ -27,7 +27,8 @@ public:
         const std::vector<Relator> &short_relators,
         const std::vector<Relator> &long_relators);
 
-    std::vector<SimsNode> list() override;
+protected:
+    std::vector<SimsNode> _list() override;
 
 private:
     void _recurse(const class StackedSimsNode &n);

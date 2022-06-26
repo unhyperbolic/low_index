@@ -5,10 +5,12 @@
 
 namespace low_index {
 
+// Should be SimStreeBase!!!
+    
 class SimsTreeBasis
 {
 public:
-    virtual std::vector<SimsNode> list() = 0;
+    std::vector<SimsNode> list() { return _list(); }
 
     virtual ~SimsTreeBasis() = default;
     
@@ -23,6 +25,8 @@ protected:
       , _long_relators(long_relators)
     {
     }
+
+    virtual std::vector<SimsNode> _list() = 0;
    
     const SimsNode _root;
     const std::vector<Relator> _short_relators;
