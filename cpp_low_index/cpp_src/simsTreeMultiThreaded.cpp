@@ -18,6 +18,7 @@ SimsTreeMultiThreaded::SimsTreeMultiThreaded(
     const unsigned int thread_num)
   : SimsTreeBasis(rank, max_degree, short_relators, long_relators)
   , _thread_num(thread_num)
+  , _num_working_threads(0)
 {
 }
 
@@ -38,7 +39,7 @@ _merge_vectors(
 void
 SimsTreeMultiThreaded::_recurse(
     const StackedSimsNode &n,
-    std::vector<SimsNode> * result,
+    _Node * result,
     _ThreadContext * c)
 {
     if(n.is_complete()) {
@@ -49,7 +50,7 @@ SimsTreeMultiThreaded::_recurse(
         if (!copy.relators_may_lift(_short_relators)) {
             return;
         }
-        result->push_back(std::move(copy));
+        result->complete_nodes.push_back(std::move(copy));
         return;
     }
 
@@ -74,7 +75,7 @@ SimsTreeMultiThreaded::_recurse(
             }
         }
         if (c->was_interrupted) {
-            c->work_info->children.push_back(_Node(new_subgraph));
+            result->children.push_back(_Node(new_subgraph));
             continue;
         }
 
@@ -97,7 +98,7 @@ SimsTreeMultiThreaded::_thread_worker(
             const size_t n = ctx->work_infos->size();
 
             if (index < n) {
-                ctx->num_working_threads++;
+                _num_working_threads++;
                 ctx->index++;
                 work_infos = ctx->work_infos;
             } else {
@@ -106,7 +107,7 @@ SimsTreeMultiThreaded::_thread_worker(
                     ctx->interrupt_thread.exchange(true);
                 }
 
-                if (ctx->num_working_threads == 0) {
+                if (_num_working_threads == 0) {
                     ctx->wake_up_threads.notify_all();
                     break;
                 }
@@ -119,13 +120,13 @@ SimsTreeMultiThreaded::_thread_worker(
             _Node &work_info = (*work_infos)[index];
             SimsNodeStack stack(work_info.root);
             _ThreadContext c(ctx, &work_info);
-            _recurse(stack.get_node(), &work_info.complete_nodes, &c);
+            _recurse(stack.get_node(), &work_info, &c);
             if (c.was_interrupted) {
                 std::unique_lock<std::mutex> lk(_mutex);
                 ctx->work_infos = &work_info.children;
                 ctx->index = 0;
             }
-            ctx->num_working_threads--;
+            _num_working_threads--;
             ctx->wake_up_threads.notify_all();
         }
     }

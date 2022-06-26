@@ -68,7 +68,6 @@ public:
             , work_infos(&root_infos)
             , index(0)
             , interrupt_thread(false)
-            , num_working_threads(0)
         {
         }
 
@@ -80,9 +79,6 @@ public:
         std::atomic_bool interrupt_thread;
 
         std::condition_variable wake_up_threads;
-
-        std::atomic_uint num_working_threads;
-
     };
 
     class _ThreadContext {
@@ -106,12 +102,13 @@ public:
 
     void _recurse(
         const StackedSimsNode &n,
-        std::vector<SimsNode> * result,
+        _Node * result,
         _ThreadContext * c = nullptr);
 
     const unsigned int _thread_num;
 
     std::mutex _mutex;
+    std::atomic_uint _num_working_threads;
 };
 
 } // Namespace low_index
