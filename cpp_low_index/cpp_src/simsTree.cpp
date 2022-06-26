@@ -148,10 +148,9 @@ SimsTree::_thread_worker(
 
         if (work_infos) {
             _PendingWorkInfo &work_info = (*work_infos)[index];
-            SimsTree tree(work_info.root, _relators.short_relators, _relators.long_relators);
             SimsNodeStack stack(work_info.root);
             _ThreadContext c(ctx, &work_info);
-            tree._recurse(stack.get_node(), _relators, &work_info.complete_nodes, &c);
+            SimsTree::_recurse(stack.get_node(), _relators, &work_info.complete_nodes, &c);
             if (c.was_interrupted) {
                 std::unique_lock<std::mutex> lk(ctx->m);
                 ctx->work_infos = &work_info.children;
