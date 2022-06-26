@@ -75,51 +75,49 @@ void
 SimsTreeMultiThreaded::_thread_worker()
 {
     while(true) {
-        {
-            std::unique_lock<std::mutex> lk(_mutex);
+        std::unique_lock<std::mutex> lk(_mutex);
 
-            const size_t index = _node_index;
-            const size_t n = _nodes->size();
+        const size_t index = _node_index;
+        const size_t n = _nodes->size();
 
-            if (index < n) {
-                _num_working_threads++;
-                _node_index++;
-                std::vector<_Node> &nodes = *_nodes;
+        if (index < n) {
+            _num_working_threads++;
+            _node_index++;
+            std::vector<_Node> &nodes = *_nodes;
 
-                lk.unlock();
-                _Node &node = nodes[index];
-                {
-                    SimsNodeStack stack(node.root);
-                    _recurse(stack.get_node(), &node);
-                }
-                const bool has_children = !node.children.empty();
-                lk.lock();
-
-                if (has_children) {
-                    _nodes = &node.children;
-                    _node_index = 0;
-                }
-
-                _num_working_threads--;
-                
-                if (has_children) {
-                    _wake_up_threads.notify_all();
-                } else if (_num_working_threads == 0) {
-                    _wake_up_threads.notify_all();
-                    break;
-                }
-            } else {
-                if (_num_working_threads == 0) {
-                    break;
-                }
-
-                if (index == n) {
-                    _node_index++;
-                    _recursion_stop_requested = true;
-                }
-
-                _wake_up_threads.wait(lk);
+            lk.unlock();
+            _Node &node = nodes[index];
+            {
+                SimsNodeStack stack(node.root);
+                _recurse(stack.get_node(), &node);
             }
+            const bool has_children = !node.children.empty();
+            lk.lock();
+
+            if (has_children) {
+                _nodes = &node.children;
+                _node_index = 0;
+            }
+
+            _num_working_threads--;
+
+            if (has_children) {
+                _wake_up_threads.notify_all();
+            } else if (_num_working_threads == 0) {
+                _wake_up_threads.notify_all();
+                break;
+            }
+        } else {
+            if (_num_working_threads == 0) {
+                break;
+            }
+
+            if (index == n) {
+                _node_index++;
+                _recursion_stop_requested = true;
+            }
+
+            _wake_up_threads.wait(lk);
         }
     }
 }
