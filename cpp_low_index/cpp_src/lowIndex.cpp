@@ -234,7 +234,7 @@ permutation_reps(
 
     std::vector<std::vector<std::vector<DegreeType>>> result;
 
-    for (const SimsNode &n : t.list(bloom_size, thread_num)) {
+    for (const SimsNode &n : t.list(thread_num)) {
         result.push_back(n.permutation_rep());
     }
 

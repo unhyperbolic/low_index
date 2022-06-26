@@ -34,19 +34,17 @@ SimsTree::SimsTree(
 }
 
 std::vector<SimsNode>
-SimsTree::list(
-    const size_t bloom_size,
-    const unsigned int thread_num) const
+SimsTree::list(const unsigned int thread_num) const
 {
     const unsigned int resolved_thread_num =
         (thread_num > 0)
             ? thread_num
             : std::thread::hardware_concurrency();
 
-    if (bloom_size <= 1 || resolved_thread_num == 1000) {
+    if (resolved_thread_num == 1) {
         return _list_single_threaded();
     } else {
-        return _list_multi_threaded(bloom_size, resolved_thread_num);
+        return _list_multi_threaded(resolved_thread_num);
     }
 }
 
@@ -121,7 +119,7 @@ SimsTree::_recurse(
 }
 
 void
-SimsTree::_thread_worker_new(
+SimsTree::_thread_worker(
     _ThreadSharedContext * ctx) const
 {
     while(true) {
@@ -166,19 +164,12 @@ SimsTree::_thread_worker_new(
             }
             ctx->num_working_threads--;
             ctx->wake_up_threads.notify_all();
-        } /* else {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            
-//            std::mutex m;
-//            std::unique_lock<std::mutex> lk(ctx->x);
-//            ctx->wake_up_threads.wait(lk);
-} */
+        }
     }
 }
     
 std::vector<SimsNode>
 SimsTree::_list_multi_threaded(
-    const size_t bloom_size,
     const unsigned int thread_num) const
 {
     _ThreadSharedContext ctx(_root);
@@ -187,62 +178,19 @@ SimsTree::_list_multi_threaded(
     threads.reserve(thread_num);
     for (unsigned int i = 0; i < thread_num; i++) {
         threads.emplace_back(
-            &SimsTree::_thread_worker_new,
+            &SimsTree::_thread_worker,
             this, &ctx);
     }
 
     for (std::thread &t : threads) {
         t.join();
     }
-
-//    std::cout << "Merging" << std::endl;
     
     std::vector<SimsNode> result;
 
     _merge_vectors(ctx.root_infos, &result);
-
-//    std::cout << "Merged" << std::endl;
     
     return result;
-    
-    /*
-    const std::vector<SimsNode> branches = _bloom(bloom_size);
-    std::vector<std::vector<SimsNode>> nested_result(branches.size());
-
-    std::atomic_size_t index(0);
-
-    std::vector<std::thread> threads;
-    threads.reserve(branches.size());
-    for (unsigned int i = 0; i < thread_num; i++) {
-        threads.emplace_back(
-            &SimsTree::_thread_worker,
-            this, branches, &index, &nested_result);
-    }
-
-    for (std::thread &t : threads) {
-        t.join();
-    }
-
-    return _merge_vectors(std::move(nested_result));
-    */
-}
-
-void
-SimsTree::_thread_worker(
-    const std::vector<SimsNode> &branches,
-    std::atomic_size_t * const index,
-    std::vector<std::vector<SimsNode>> * nested_result) const
-{
-    while(true) {
-        const size_t i = (*index)++;
-
-        if (i >= branches.size()) {
-            break;
-        }
-
-        const SimsTree t(branches[i], _short_relators, _long_relators);
-        (*nested_result)[i] = t._list_single_threaded();
-    }
 }
 
 } // Namespace low_index

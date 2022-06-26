@@ -52,9 +52,7 @@ public:
     /// If bloom_size is too large, the single-threaded stage will take
     /// a long time. If bloom_size is too small, there is a risk that one
     /// of tasks is taking much longer and the other threads run out of work.
-    std::vector<SimsNode> list(
-        size_t bloom_size,
-        unsigned int thread_num) const;
+    std::vector<SimsNode> list(unsigned int thread_num) const;
 
 public:
     SimsTree(
@@ -162,23 +160,14 @@ public:
     // vector is depth-first search though - so consistent with _recurse.
     std::vector<SimsNode> _list_single_threaded() const;
     std::vector<SimsNode> _list_multi_threaded(
-        size_t bloom_size, unsigned int thread_num) const;
+        unsigned int thread_num) const;
 
     void _thread_worker(
-        const std::vector<SimsNode> &branches,
-        std::atomic_size_t * index,
-        std::vector<std::vector<SimsNode>> * nested_result) const;
-
-    void _thread_worker_new(
         _ThreadSharedContext * ctx) const;
-
-    
     
     const std::vector<Relator> _short_relators;
     const std::vector<Relator> _long_relators;
     const SimsNode _root;
-
-    mutable bool was_interrupted;
 };
 
 } // Namespace low_index
