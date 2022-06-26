@@ -11,52 +11,20 @@
 namespace low_index {
 
 SimsTreeMultiThreaded::SimsTreeMultiThreaded(
-    const SimsNode &root,
-    const std::vector<Relator> &short_relators,
-    const std::vector<Relator> &long_relators)
-  : _relators{short_relators, long_relators}
-  , _root(root)
-{
-
-}
-
-SimsTreeMultiThreaded::SimsTreeMultiThreaded(
     const RankType rank,
     const DegreeType max_degree,
     const std::vector<Relator> &short_relators,
-    const std::vector<Relator> &long_relators)
-  : SimsTreeMultiThreaded(
-      SimsNode(rank, max_degree, short_relators.size()),
-      short_relators,
-      long_relators)
+    const std::vector<Relator> &long_relators,
+    const unsigned int thread_num)
+  : SimsTreeBasis(rank, max_degree, short_relators, long_relators)
+  , _thread_num(thread_num)
 {
 }
 
 std::vector<SimsNode>
-SimsTreeMultiThreaded::list(const unsigned int thread_num) const
+SimsTreeMultiThreaded::list()
 {
-    const unsigned int resolved_thread_num =
-        (thread_num > 0)
-            ? thread_num
-            : std::thread::hardware_concurrency();
-
-    if (resolved_thread_num == 1) {
-        return _list_single_threaded();
-    } else {
-        return _list_multi_threaded(resolved_thread_num);
-    }
-}
-
-std::vector<SimsNode>
-SimsTreeMultiThreaded::_list_single_threaded() const
-{
-    std::vector<SimsNode> nodes;
-
-    SimsNodeStack stack(_root);
-
-    _recurse(stack.get_node(), _relators, &nodes);
-
-    return nodes;
+    return _list_multi_threaded(_thread_num);
 }
 
 static
@@ -76,16 +44,15 @@ _merge_vectors(
 void
 SimsTreeMultiThreaded::_recurse(
     const StackedSimsNode &n,
-    const ShortAndLongRelators &relators,
     std::vector<SimsNode> * result,
     _ThreadContext * c)
 {
     if(n.is_complete()) {
-        if (!n.relators_lift(relators.long_relators)) {
+        if (!n.relators_lift(_long_relators)) {
             return;
         }
         SimsNode copy(n);
-        if (!copy.relators_may_lift(relators.short_relators)) {
+        if (!copy.relators_may_lift(_short_relators)) {
             return;
         }
         result->push_back(std::move(copy));
@@ -100,7 +67,7 @@ SimsTreeMultiThreaded::_recurse(
         }
         StackedSimsNode new_subgraph(n);
         new_subgraph.add_edge(slot.first, slot.second, v);
-        if (!new_subgraph.relators_may_lift(relators.short_relators)) {
+        if (!new_subgraph.relators_may_lift(_short_relators)) {
             continue;
         }
         if (!new_subgraph.may_be_minimal()) {
@@ -109,13 +76,13 @@ SimsTreeMultiThreaded::_recurse(
         if (c && !c->should_recurse(new_subgraph)) {
             continue;
         }
-        _recurse(new_subgraph, relators, result, c);
+        _recurse(new_subgraph, result, c);
     }
 }
 
 void
 SimsTreeMultiThreaded::_thread_worker(
-    _ThreadSharedContext * ctx) const
+    _ThreadSharedContext * ctx)
 {
     while(true) {
         size_t index;
@@ -150,7 +117,7 @@ SimsTreeMultiThreaded::_thread_worker(
             _PendingWorkInfo &work_info = (*work_infos)[index];
             SimsNodeStack stack(work_info.root);
             _ThreadContext c(ctx, &work_info);
-            SimsTreeMultiThreaded::_recurse(stack.get_node(), _relators, &work_info.complete_nodes, &c);
+            _recurse(stack.get_node(), &work_info.complete_nodes, &c);
             if (c.was_interrupted) {
                 std::unique_lock<std::mutex> lk(ctx->m);
                 ctx->work_infos = &work_info.children;
@@ -164,7 +131,7 @@ SimsTreeMultiThreaded::_thread_worker(
 
 std::vector<SimsNode>
 SimsTreeMultiThreaded::_list_multi_threaded(
-    const unsigned int thread_num) const
+    const unsigned int thread_num)
 {
     _ThreadSharedContext ctx(_root);
 

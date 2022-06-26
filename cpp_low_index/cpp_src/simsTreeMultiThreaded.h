@@ -1,7 +1,7 @@
 #ifndef LOW_INDEX_SIMS_TREE_MULTI_THREADED_H
 #define LOW_INDEX_SIMS_TREE_MULTI_THREADED_H
 
-#include "simsNode.h"
+#include "simsTreeBasis.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -24,7 +24,7 @@ class StackedSimsNode;
 /// The class only stores the root of the tree that is to be visited
 /// recursively.
 ///
-class SimsTreeMultiThreaded
+class SimsTreeMultiThreaded : public SimsTreeBasis
 {
 public:
     /// Construct SimsTreeMultiThreaded with an empty root.
@@ -33,7 +33,8 @@ public:
         RankType rank,
         DegreeType max_degree,
         const std::vector<Relator> &short_relators,
-        const std::vector<Relator> &long_relators);
+        const std::vector<Relator> &long_relators,
+        unsigned int thread_num);
 
     /// Find all complete covering subgraphs for which all relators lift.
     /// The parameters do not affect the result, but do affect the performance.
@@ -44,14 +45,9 @@ public:
     /// set thread_num to a positive value. In particular, setting
     /// thread_num = 1 forces the single-threaded execution.
     ///
-    std::vector<SimsNode> list(unsigned int thread_num) const;
+    std::vector<SimsNode> list() override;
 
 public:
-    SimsTreeMultiThreaded(
-        const SimsNode &root,
-        const std::vector<Relator> &short_relators,
-        const std::vector<Relator> &long_relators);
-
     class _ThreadSharedContext;
     class _PendingWorkInfo;
     class _ThreadContext;
@@ -131,22 +127,18 @@ public:
         bool was_interrupted;
     };
 
-    std::vector<SimsNode> _list_single_threaded() const;
     std::vector<SimsNode> _list_multi_threaded(
-        unsigned int thread_num) const;
+        unsigned int thread_num);
 
     void _thread_worker(
-        _ThreadSharedContext * ctx) const;
+        _ThreadSharedContext * ctx);
 
-    static
     void _recurse(
         const StackedSimsNode &n,
-        const ShortAndLongRelators &relators,
         std::vector<SimsNode> * result,
         _ThreadContext * c = nullptr);
 
-    const ShortAndLongRelators _relators;
-    const SimsNode _root;
+    unsigned int _thread_num;
 };
 
 } // Namespace low_index

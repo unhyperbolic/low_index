@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <cstdlib>
+#include <thread>
 
 namespace low_index {
 
@@ -233,18 +234,26 @@ permutation_reps(
 
     std::vector<std::vector<std::vector<DegreeType>>> result;
 
-    if (thread_num == 1) {
-        SimsTree t(rank, max_degree, rels.first, rels.second);
+    std::unique_ptr<SimsTreeBasis> t;
 
-        for (const SimsNode &n : t.list()) {
-            result.push_back(n.permutation_rep());
-        }
+    const unsigned int resolved_thread_num =
+        (thread_num > 0)
+            ? thread_num
+            : std::thread::hardware_concurrency();
+
+    if (resolved_thread_num > 1) {
+        t.reset(
+            new SimsTreeMultiThreaded(
+                rank, max_degree, rels.first, rels.second,
+                resolved_thread_num));
     } else {
-        SimsTreeMultiThreaded t(rank, max_degree, rels.first, rels.second);
-        
-        for (const SimsNode &n : t.list(thread_num)) {
-            result.push_back(n.permutation_rep());
-        }
+        t.reset(
+            new SimsTree(
+                rank, max_degree, rels.first, rels.second));
+    }
+
+    for (const SimsNode &n : t->list()) {
+        result.push_back(n.permutation_rep());
     }
 
     return result;

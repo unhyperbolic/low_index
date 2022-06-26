@@ -10,6 +10,8 @@ class SimsTreeBasis
 public:
     virtual std::vector<SimsNode> list() = 0;
 
+    virtual ~SimsTreeBasis() = default;
+    
 protected:
     SimsTreeBasis(
         RankType rank,
