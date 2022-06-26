@@ -225,7 +225,6 @@ permutation_reps(
     const DegreeType max_degree,
     const unsigned int num_long_relators,
     const std::string &strategy,
-    const size_t bloom_size,
     const unsigned int thread_num)
 {
     const std::pair<std::vector<Relator>, std::vector<Relator>> rels =
@@ -266,7 +265,6 @@ permutation_reps(
     const DegreeType max_degree,
     const unsigned int num_long_relators,
     const std::string &strategy,
-    const size_t bloom_size,
     const unsigned int thread_num)
 {
     return permutation_reps(
@@ -275,7 +273,6 @@ permutation_reps(
         max_degree,
         num_long_relators,
         strategy,
-        bloom_size,
         thread_num);
 }
 

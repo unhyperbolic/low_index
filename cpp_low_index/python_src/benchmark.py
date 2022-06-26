@@ -83,8 +83,7 @@ def run_example(ex):
             rank = ex['rank'],
             relators = ex['short relators'] + ex['long relators'],
             max_degree = ex['index'],
-            num_long_relators = ex['num_long'],
-            bloom_size = 2000))
+            num_long_relators = ex['num_long']))
 
 def run_example_low_level(ex):
     short_relators, long_relators = (
@@ -102,7 +101,7 @@ def run_example_low_level(ex):
         long_relators = long_relators)
     # thread_num = 0 makes SimsTree determine the number of
     # threads by using std::thread::hardware_concurrency()
-    return len(tree.list(bloom_size = 2000, thread_num = 0))
+    return len(tree.list())
 
 use_low_level = False
 
