@@ -139,6 +139,27 @@ public:
         {
         }
 
+        bool should_recurse(const AbstractSimsNode &n) {
+            if (was_interrupted) {
+                work_info->children.push_back(
+                    _PendingWorkInfo(n));
+                return false;
+            }
+
+            if (n.is_complete()) {
+                return true;
+            }
+
+            if (shared_ctx->interrupt_thread.exchange(false)) {
+                was_interrupted = true;
+                work_info->children.push_back(
+                    _PendingWorkInfo(n));
+                return false;
+            }
+
+            return true;
+        }
+        
         _ThreadSharedContext * const shared_ctx;
         _PendingWorkInfo * const work_info;
         bool was_interrupted;

@@ -190,17 +190,8 @@ SimsTree::_recurse(
                 new_subgraph.add_edge(slot.first, slot.second, v);
                 if (new_subgraph.relators_may_lift(_short_relators)) {
                     if (new_subgraph.may_be_minimal()) {
-                        if (c->was_interrupted) {
-                            c->work_info->children.push_back(
-                                _PendingWorkInfo(new_subgraph));
-                        } else {
-                            if (!new_subgraph.is_complete() && c->shared_ctx->interrupt_thread.exchange(false)) {
-                                c->was_interrupted = true;
-                                c->work_info->children.push_back(
-                                    _PendingWorkInfo(new_subgraph));
-                            } else {
-                                _recurse(new_subgraph, result, c);
-                            }
+                        if (c->should_recurse(new_subgraph)) {
+                            _recurse(new_subgraph, result, c);
                         }
                     }
                 }
@@ -208,7 +199,7 @@ SimsTree::_recurse(
         }
     }
 }
-    
+
 void
 SimsTree::_thread_worker_new(
     _ThreadSharedContext * ctx) const
