@@ -1,6 +1,7 @@
 #include "lowIndex.h"
 
 #include "simsTree.h"
+#include "simsTreeMultiThreaded.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -230,12 +231,20 @@ permutation_reps(
         compute_short_and_long_relators(
             rank, relators, max_degree, num_long_relators, strategy);
 
-    SimsTree t(rank, max_degree, rels.first, rels.second);
-
     std::vector<std::vector<std::vector<DegreeType>>> result;
 
-    for (const SimsNode &n : t.list(thread_num)) {
-        result.push_back(n.permutation_rep());
+    if (thread_num == 1) {
+        SimsTree t(rank, max_degree, rels.first, rels.second);
+
+        for (const SimsNode &n : t.list()) {
+            result.push_back(n.permutation_rep());
+        }
+    } else {
+        SimsTreeMultiThreaded t(rank, max_degree, rels.first, rels.second);
+        
+        for (const SimsNode &n : t.list(thread_num)) {
+            result.push_back(n.permutation_rep());
+        }
     }
 
     return result;
