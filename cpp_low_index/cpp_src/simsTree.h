@@ -56,22 +56,16 @@ public:
     class _PendingWorkInfo;
     class _ThreadContext;
 
-    static
-    void _recurse(
-        const StackedSimsNode &n,
-        const ShortAndLongRelators &relators,
-        std::vector<SimsNode> * result,
-        _ThreadContext * c = nullptr);
-
     class _PendingWorkInfo {
     public:
         _PendingWorkInfo(const SimsNode &root) : root(root) { }
         // The node to process.
         const SimsNode root;
 
-        // Filled in by worker thread with complete nodes.
+        // Filled by worker thread with complete nodes.
         std::vector<SimsNode> complete_nodes;
-        // If worker thread was interrupted, filled with the remaining nodes that need to be processed.
+        // Filled by worker thread with nodes that still need to be
+        // recursed if worker thread was prompted to stop recursing.
         std::vector<_PendingWorkInfo> children;
     };
 
@@ -85,26 +79,16 @@ public:
             , num_working_threads(0)
         {
         }
-        
+
         std::vector<_PendingWorkInfo> root_infos;
-        
-        // The next thread needs to pick up
-        // parent_work_record->work_records[work_records.size() - 1 - index];
+
         std::vector<_PendingWorkInfo> *work_infos;
         size_t index;
-  
-        // Interrupted thread needs to set parent_work_record to its own _WorkRecord.
-        // Set index to work_recors.size() - 1.
-        
-        
-        // index-- to pick up next work_record. If index is negative,  
-        // If index == -1, then set interrupt_thread.
+
         std::atomic_bool interrupt_thread;
 
-        // Called when thread has added new work_record.
         std::condition_variable wake_up_threads;
 
-        // Number of working threads + 1 if there is any work on the parent_work_record.
         std::atomic_uint num_working_threads;
 
         std::mutex m;
@@ -141,22 +125,26 @@ public:
 
             return true;
         }
-        
+
         _ThreadSharedContext * const shared_ctx;
         _PendingWorkInfo * const work_info;
         bool was_interrupted;
     };
-    
-    // Enumerate at least n nodes by recursively adding edges to root in a
-    // breadth-first search manner. Note that the order in the returned
-    // vector is depth-first search though - so consistent with _recurse.
+
     std::vector<SimsNode> _list_single_threaded() const;
     std::vector<SimsNode> _list_multi_threaded(
         unsigned int thread_num) const;
 
     void _thread_worker(
         _ThreadSharedContext * ctx) const;
-    
+
+    static
+    void _recurse(
+        const StackedSimsNode &n,
+        const ShortAndLongRelators &relators,
+        std::vector<SimsNode> * result,
+        _ThreadContext * c = nullptr);
+
     const ShortAndLongRelators _relators;
     const SimsNode _root;
 };

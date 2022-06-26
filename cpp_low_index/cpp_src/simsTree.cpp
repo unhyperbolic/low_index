@@ -120,7 +120,7 @@ SimsTree::_thread_worker(
     while(true) {
         size_t index;
         std::vector<_PendingWorkInfo> * work_infos = nullptr;
-        
+
         {
             std::unique_lock<std::mutex> lk(ctx->m);
             index = ctx->index;
@@ -136,7 +136,7 @@ SimsTree::_thread_worker(
                     ctx->index++;
                     ctx->interrupt_thread.exchange(true);
                 }
-            
+
                 if (ctx->num_working_threads == 0) {
                     ctx->wake_up_threads.notify_all();
                     break;
@@ -161,7 +161,7 @@ SimsTree::_thread_worker(
         }
     }
 }
-    
+
 std::vector<SimsNode>
 SimsTree::_list_multi_threaded(
     const unsigned int thread_num) const
@@ -179,11 +179,11 @@ SimsTree::_list_multi_threaded(
     for (std::thread &t : threads) {
         t.join();
     }
-    
+
     std::vector<SimsNode> result;
 
     _merge_vectors(ctx.root_infos, &result);
-    
+
     return result;
 }
 

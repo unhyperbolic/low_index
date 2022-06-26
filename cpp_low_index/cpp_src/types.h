@@ -23,7 +23,7 @@ struct ShortAndLongRelators {
     std::vector<Relator> short_relators;
     std::vector<Relator> long_relators;
 };
-    
+
 }
 
 #endif
