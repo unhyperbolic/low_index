@@ -73,9 +73,8 @@ public:
     class _ThreadContext;
     
     void _recurse(
-        _ThreadSharedContext * ctx,
         const StackedSimsNode &n,
-        _PendingWorkInfo *workInfo,
+        std::vector<SimsNode> * result,
         _ThreadContext * c) const;
 
     class _PendingWorkInfo {
