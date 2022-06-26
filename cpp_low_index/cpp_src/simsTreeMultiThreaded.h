@@ -64,16 +64,11 @@ public:
     class _ThreadSharedContext {
     public:
         _ThreadSharedContext(const SimsNode &root)
-            : root_infos{_Node(root)}
-            , work_infos(&root_infos)
-            , index(0)
+            : index(0)
             , interrupt_thread(false)
         {
         }
 
-        std::vector<_Node> root_infos;
-
-        std::vector<_Node> *work_infos;
         size_t index;
 
         std::atomic_bool interrupt_thread;
@@ -107,8 +102,11 @@ public:
 
     const unsigned int _thread_num;
 
+    std::vector<_Node> *_nodes;
+
     std::mutex _mutex;
     std::atomic_uint _num_working_threads;
+
 };
 
 } // Namespace low_index

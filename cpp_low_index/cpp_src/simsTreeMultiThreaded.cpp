@@ -18,6 +18,7 @@ SimsTreeMultiThreaded::SimsTreeMultiThreaded(
     const unsigned int thread_num)
   : SimsTreeBasis(rank, max_degree, short_relators, long_relators)
   , _thread_num(thread_num)
+  , _nodes(nullptr)
   , _num_working_threads(0)
 {
 }
@@ -89,18 +90,18 @@ SimsTreeMultiThreaded::_thread_worker(
 {
     while(true) {
         size_t index;
-        std::vector<_Node> * work_infos = nullptr;
+        std::vector<_Node> * nodes = nullptr;
 
         {
             std::unique_lock<std::mutex> lk(_mutex);
             index = ctx->index;
 
-            const size_t n = ctx->work_infos->size();
+            const size_t n = _nodes->size();
 
             if (index < n) {
                 _num_working_threads++;
                 ctx->index++;
-                work_infos = ctx->work_infos;
+                nodes = _nodes;
             } else {
                 if (index == n) {
                     ctx->index++;
@@ -116,14 +117,14 @@ SimsTreeMultiThreaded::_thread_worker(
             }
         }
 
-        if (work_infos) {
-            _Node &work_info = (*work_infos)[index];
-            SimsNodeStack stack(work_info.root);
-            _ThreadContext c(ctx, &work_info);
-            _recurse(stack.get_node(), &work_info, &c);
+        if (nodes) {
+            _Node &node = (*nodes)[index];
+            SimsNodeStack stack(node.root);
+            _ThreadContext c(ctx, &node);
+            _recurse(stack.get_node(), &node, &c);
             if (c.was_interrupted) {
                 std::unique_lock<std::mutex> lk(_mutex);
-                ctx->work_infos = &work_info.children;
+                _nodes = &node.children;
                 ctx->index = 0;
             }
             _num_working_threads--;
@@ -137,6 +138,9 @@ SimsTreeMultiThreaded::list()
 {
     _ThreadSharedContext ctx(_root);
 
+    std::vector<_Node> root_nodes{_Node(_root)};
+    _nodes = &root_nodes;
+    
     std::vector<std::thread> threads;
     threads.reserve(_thread_num);
     for (unsigned int i = 0; i < _thread_num; i++) {
@@ -150,9 +154,7 @@ SimsTreeMultiThreaded::list()
     }
 
     std::vector<SimsNode> result;
-
-    _merge_vectors(ctx.root_infos, &result);
-
+    _merge_vectors(root_nodes, &result);
     return result;
 }
 
