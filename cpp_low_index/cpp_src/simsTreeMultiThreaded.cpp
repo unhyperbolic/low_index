@@ -101,11 +101,8 @@ SimsTreeMultiThreaded::_thread_worker()
 
             _num_working_threads--;
 
-            if (has_children) {
+            if (has_children || _num_working_threads == 0) {
                 _wake_up_threads.notify_all();
-            } else if (_num_working_threads == 0) {
-                _wake_up_threads.notify_all();
-                break;
             }
         } else {
             if (_num_working_threads == 0) {
