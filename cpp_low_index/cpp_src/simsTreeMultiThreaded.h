@@ -50,13 +50,10 @@ public:
     public:
         _Node(const SimsNode &root)
           : root(root)
-          , stopped_recursion(false)
         { }
         // The node to process.
         const SimsNode root;
 
-        bool stopped_recursion;
-        
         // Filled by worker thread with complete nodes.
         std::vector<SimsNode> complete_nodes;
         // Filled by worker thread with nodes that still need to be

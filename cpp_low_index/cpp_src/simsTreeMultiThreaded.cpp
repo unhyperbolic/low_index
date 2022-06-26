@@ -55,14 +55,16 @@ SimsTreeMultiThreaded::_recurse(
             continue;
         }
 
-        if (!result->stopped_recursion) {
-            if (!n.is_complete() && _recursion_stop_requested.exchange(false)) {
-                result->stopped_recursion = true;
-            }
-        }
-        if (result->stopped_recursion) {
+        if (!result->children.empty()) {
             result->children.emplace_back(new_subgraph);
             continue;
+        }
+
+        if (!n.is_complete()) {
+            if (_recursion_stop_requested.exchange(false)) {
+                result->children.emplace_back(new_subgraph);
+                continue;
+            }
         }
 
         _recurse(new_subgraph, result);
