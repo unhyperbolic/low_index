@@ -64,10 +64,6 @@ public:
 
     // Recursively add edges to n. Add complete covering graphs where
     // all relators lift to nodes. Order is depth-first search.
-    void _recurse(
-        const StackedSimsNode &n,
-        std::vector<SimsNode> *nodes) const;
-
     class _ThreadSharedContext;
     class _PendingWorkInfo;
     class _ThreadContext;
@@ -75,7 +71,7 @@ public:
     void _recurse(
         const StackedSimsNode &n,
         std::vector<SimsNode> * result,
-        _ThreadContext * c) const;
+        _ThreadContext * c = nullptr) const;
 
     class _PendingWorkInfo {
     public:
@@ -122,10 +118,6 @@ public:
         std::atomic_uint num_working_threads;
 
         std::mutex m;
-
-        std::mutex x;
-        
-        std::mutex out_mutex;
     };
 
     class _ThreadContext {
@@ -168,8 +160,6 @@ public:
     // Enumerate at least n nodes by recursively adding edges to root in a
     // breadth-first search manner. Note that the order in the returned
     // vector is depth-first search though - so consistent with _recurse.
-    std::vector<SimsNode> _bloom(size_t n) const;
-
     std::vector<SimsNode> _list_single_threaded() const;
     std::vector<SimsNode> _list_multi_threaded(
         size_t bloom_size, unsigned int thread_num) const;

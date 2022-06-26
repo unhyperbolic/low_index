@@ -33,87 +33,6 @@ SimsTree::SimsTree(
 {
 }
 
-void
-SimsTree::_recurse(
-    const StackedSimsNode &n,
-    std::vector<SimsNode> *nodes) const
-{
-    if(n.is_complete()) {
-        if (n.relators_lift(_long_relators)) {
-            SimsNode copy(n);
-            if (copy.relators_may_lift(_short_relators)) {
-                nodes->push_back(std::move(copy));
-            }
-        }
-    } else {
-        const std::pair<LetterType, DegreeType> slot =
-            n.first_empty_slot();
-        const DegreeType m =
-            std::min<DegreeType>(
-                n.degree() + 1,
-                n.max_degree());
-        for (DegreeType v = 1; v <= m; v++) {
-            if (n.act_by(-slot.first, v) == 0) {
-                StackedSimsNode new_subgraph(n);
-                new_subgraph.add_edge(slot.first, slot.second, v);
-                if (new_subgraph.relators_may_lift(_short_relators)) {
-                    if (new_subgraph.may_be_minimal()) {
-                        _recurse(new_subgraph, nodes);
-                    }
-                }
-            }
-        }
-    }
-}
-
-std::vector<SimsNode>
-SimsTree::_bloom(const size_t n) const
-{
-    std::list<SimsNode> r = { _root };
-
-    auto it = r.begin();
-    bool has_incomplete_node = false;
-
-    while (r.size() < n) {
-        if (it == r.end()) {
-            if (it == r.begin()) {
-                break;
-            }
-            if (!has_incomplete_node) {
-                break;
-            }
-            it = r.begin();
-            has_incomplete_node = false;
-        }
-
-        if (it->is_complete()) {
-            ++it;
-        } else {
-            const std::pair<LetterType, DegreeType> slot =
-                it->first_empty_slot();
-            const DegreeType m =
-                std::min<DegreeType>(
-                    it->degree() + 1,
-                    it->max_degree());
-            for (DegreeType v = 1; v <= m; v++) {
-                if (it->act_by(-slot.first, v) == 0) {
-                    SimsNode new_subgraph(*it);
-                    new_subgraph.add_edge(slot.first, slot.second, v);
-                    if (new_subgraph.relators_may_lift(_short_relators)) {
-                        if (new_subgraph.may_be_minimal()) {
-                            r.insert(it, new_subgraph);
-                            has_incomplete_node = true;
-                        }
-                    }
-                }
-            }
-            it = r.erase(it);
-        }
-    }
-
-    return std::vector<SimsNode>(r.begin(), r.end());
-}
-
 std::vector<SimsNode>
 SimsTree::list(
     const size_t bloom_size,
@@ -173,8 +92,6 @@ SimsTree::_recurse(
             SimsNode copy(n);
             if (copy.relators_may_lift(_short_relators)) {
                 result->push_back(std::move(copy));
-//                work_info->complete_nodes.push_back(copy);
-//                    std::move(copy));
             }
         }
     } else {
@@ -190,7 +107,7 @@ SimsTree::_recurse(
                 new_subgraph.add_edge(slot.first, slot.second, v);
                 if (new_subgraph.relators_may_lift(_short_relators)) {
                     if (new_subgraph.may_be_minimal()) {
-                        if (c->should_recurse(new_subgraph)) {
+                        if (!c || c->should_recurse(new_subgraph)) {
                             _recurse(new_subgraph, result, c);
                         }
                     }
