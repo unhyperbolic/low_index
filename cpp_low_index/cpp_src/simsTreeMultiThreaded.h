@@ -81,7 +81,7 @@ public:
 
     std::mutex _mutex;
     std::atomic_bool _recursion_stop_requested;
-    std::atomic_uint _num_working_threads;
+    unsigned int _num_working_threads;
     std::condition_variable _wake_up_threads;
 };
 
