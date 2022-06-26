@@ -54,7 +54,7 @@ SimsTree::_list_single_threaded() const
 
     SimsNodeStack stack(_root);
 
-    _recurse(stack.get_node(), &nodes);
+    _recurse(stack.get_node(), _relators, &nodes);
 
     return nodes;
 }
@@ -73,23 +73,19 @@ _merge_vectors(
     }
 }
 
-// _recurse(const StackedSimsNode &n,
-//    const std::pair<std::vector<Relator>, std::vector<Relator>> &relators,
-//    std::vector<SimsNode> *result,
-//    _ThreadContext * ctx);
-
 void
 SimsTree::_recurse(
     const StackedSimsNode &n,
+    const ShortAndLongRelators &relators,
     std::vector<SimsNode> * result,
-    _ThreadContext * c) const
+    _ThreadContext * c)
 {
     if(n.is_complete()) {
-        if (!n.relators_lift(_relators.long_relators)) {
+        if (!n.relators_lift(relators.long_relators)) {
             return;
         }
         SimsNode copy(n);
-        if (!copy.relators_may_lift(_relators.short_relators)) {
+        if (!copy.relators_may_lift(relators.short_relators)) {
             return;
         }
         result->push_back(std::move(copy));
@@ -104,7 +100,7 @@ SimsTree::_recurse(
         }
         StackedSimsNode new_subgraph(n);
         new_subgraph.add_edge(slot.first, slot.second, v);
-        if (!new_subgraph.relators_may_lift(_relators.short_relators)) {
+        if (!new_subgraph.relators_may_lift(relators.short_relators)) {
             continue;
         }
         if (!new_subgraph.may_be_minimal()) {
@@ -113,7 +109,7 @@ SimsTree::_recurse(
         if (c && !c->should_recurse(new_subgraph)) {
             continue;
         }
-        _recurse(new_subgraph, result, c);
+        _recurse(new_subgraph, relators, result, c);
     }
 }
 
@@ -155,7 +151,7 @@ SimsTree::_thread_worker(
             SimsTree tree(work_info.root, _relators.short_relators, _relators.long_relators);
             SimsNodeStack stack(work_info.root);
             _ThreadContext c(ctx, &work_info);
-            tree._recurse(stack.get_node(), &work_info.complete_nodes, &c);
+            tree._recurse(stack.get_node(), _relators, &work_info.complete_nodes, &c);
             if (c.was_interrupted) {
                 std::unique_lock<std::mutex> lk(ctx->m);
                 ctx->work_infos = &work_info.children;
