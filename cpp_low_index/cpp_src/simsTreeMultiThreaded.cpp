@@ -4,9 +4,7 @@
 #include "simsTreeMultiThreaded.h"
 #include "stackedSimsNode.h"
 
-#include <list>
 #include <thread>
-#include <atomic>
 
 namespace low_index {
 
@@ -25,25 +23,10 @@ SimsTreeMultiThreaded::SimsTreeMultiThreaded(
 {
 }
 
-static
-void
-_merge_vectors(
-    const std::vector<SimsTreeMultiThreaded::_Node> &infos,
-    std::vector<SimsNode> * result)
-{
-    for (const auto &info : infos) {
-        for (const SimsNode &n : info.complete_nodes) {
-            result->push_back(n);
-        }
-        _merge_vectors(info.children, result);
-    }
-}
-
 void
 SimsTreeMultiThreaded::_recurse(
     const StackedSimsNode &n,
-    _Node * result,
-    _ThreadContext * c)
+    _Node * result)
 {
     if(n.is_complete()) {
         if (!n.relators_lift(_long_relators)) {
@@ -72,17 +55,17 @@ SimsTreeMultiThreaded::_recurse(
             continue;
         }
 
-        if (!c->was_interrupted) {
+        if (!result->stopped_recursion) {
             if (!n.is_complete() && _recursion_stop_requested.exchange(false)) {
-                c->was_interrupted = true;
+                result->stopped_recursion = true;
             }
         }
-        if (c->was_interrupted) {
-            result->children.push_back(_Node(new_subgraph));
+        if (result->stopped_recursion) {
+            result->children.emplace_back(new_subgraph);
             continue;
         }
 
-        _recurse(new_subgraph, result, c);
+        _recurse(new_subgraph, result);
     }
 }
 
@@ -121,9 +104,8 @@ SimsTreeMultiThreaded::_thread_worker()
         if (nodes) {
             _Node &node = (*nodes)[index];
             SimsNodeStack stack(node.root);
-            _ThreadContext c(&node);
-            _recurse(stack.get_node(), &node, &c);
-            if (c.was_interrupted) {
+            _recurse(stack.get_node(), &node);
+            if (node.stopped_recursion) {
                 std::unique_lock<std::mutex> lk(_mutex);
                 _nodes = &node.children;
                 _node_index = 0;
@@ -131,6 +113,20 @@ SimsTreeMultiThreaded::_thread_worker()
             _num_working_threads--;
             _wake_up_threads.notify_all();
         }
+    }
+}
+
+static
+void
+_merge_vectors(
+    const std::vector<SimsTreeMultiThreaded::_Node> &infos,
+    std::vector<SimsNode> * result)
+{
+    for (const auto &info : infos) {
+        for (const SimsNode &n : info.complete_nodes) {
+            result->push_back(n);
+        }
+        _merge_vectors(info.children, result);
     }
 }
 

@@ -50,10 +50,15 @@ public:
 public:
     class _Node {
     public:
-        _Node(const SimsNode &root) : root(root) { }
+        _Node(const SimsNode &root)
+          : root(root)
+          , stopped_recursion(false)
+        { }
         // The node to process.
         const SimsNode root;
 
+        bool stopped_recursion;
+        
         // Filled by worker thread with complete nodes.
         std::vector<SimsNode> complete_nodes;
         // Filled by worker thread with nodes that still need to be
@@ -61,25 +66,11 @@ public:
         std::vector<_Node> children;
     };
 
-    class _ThreadContext {
-    public:
-        _ThreadContext(
-                _Node * const work_info)
-          : work_info(work_info)
-          , was_interrupted(false)
-        {
-        }
-
-        _Node * const work_info;
-        bool was_interrupted;
-    };
-
-    void _thread_worker();
-
     void _recurse(
         const StackedSimsNode &n,
-        _Node * result,
-        _ThreadContext * c = nullptr);
+        _Node * result);
+
+    void _thread_worker();
 
     const unsigned int _thread_num;
 
@@ -90,7 +81,6 @@ public:
     std::atomic_bool _recursion_stop_requested;
     std::atomic_uint _num_working_threads;
     std::condition_variable _wake_up_threads;
-
 };
 
 } // Namespace low_index
