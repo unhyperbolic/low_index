@@ -165,8 +165,7 @@ public:
     void _thread_worker(
         _ThreadSharedContext * ctx) const;
     
-    const std::vector<Relator> _short_relators;
-    const std::vector<Relator> _long_relators;
+    const ShortAndLongRelators _relators;
     const SimsNode _root;
 };
 

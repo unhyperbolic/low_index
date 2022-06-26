@@ -14,8 +14,7 @@ SimsTree::SimsTree(
     const SimsNode &root,
     const std::vector<Relator> &short_relators,
     const std::vector<Relator> &long_relators)
-  : _short_relators(short_relators)
-  , _long_relators(long_relators)
+  : _relators{short_relators, long_relators}
   , _root(root)
 {
 
@@ -86,11 +85,11 @@ SimsTree::_recurse(
     _ThreadContext * c) const
 {
     if(n.is_complete()) {
-        if (!n.relators_lift(_long_relators)) {
+        if (!n.relators_lift(_relators.long_relators)) {
             return;
         }
         SimsNode copy(n);
-        if (!copy.relators_may_lift(_short_relators)) {
+        if (!copy.relators_may_lift(_relators.short_relators)) {
             return;
         }
         result->push_back(std::move(copy));
@@ -105,7 +104,7 @@ SimsTree::_recurse(
         }
         StackedSimsNode new_subgraph(n);
         new_subgraph.add_edge(slot.first, slot.second, v);
-        if (!new_subgraph.relators_may_lift(_short_relators)) {
+        if (!new_subgraph.relators_may_lift(_relators.short_relators)) {
             continue;
         }
         if (!new_subgraph.may_be_minimal()) {
@@ -153,7 +152,7 @@ SimsTree::_thread_worker(
 
         if (work_infos) {
             _PendingWorkInfo &work_info = (*work_infos)[index];
-            SimsTree tree(work_info.root, _short_relators, _long_relators);
+            SimsTree tree(work_info.root, _relators.short_relators, _relators.long_relators);
             SimsNodeStack stack(work_info.root);
             _ThreadContext c(ctx, &work_info);
             tree._recurse(stack.get_node(), &work_info.complete_nodes, &c);
