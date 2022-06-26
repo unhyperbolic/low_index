@@ -19,6 +19,8 @@ SimsTreeMultiThreaded::SimsTreeMultiThreaded(
   : SimsTreeBasis(rank, max_degree, short_relators, long_relators)
   , _thread_num(thread_num)
   , _nodes(nullptr)
+  , _node_index(0)
+  , _recursion_stop_requested(false)
   , _num_working_threads(0)
 {
 }

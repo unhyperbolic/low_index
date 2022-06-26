@@ -61,6 +61,7 @@ public:
         std::vector<_Node> children;
     };
 
+    /*
     class _ThreadSharedContext {
     public:
         _ThreadSharedContext(const SimsNode &root)
@@ -75,6 +76,7 @@ public:
 
         std::condition_variable wake_up_threads;
     };
+    */
 
     class _ThreadContext {
     public:
@@ -103,9 +105,12 @@ public:
     const unsigned int _thread_num;
 
     std::vector<_Node> *_nodes;
+    size_t _node_index;
 
     std::mutex _mutex;
+    std::atomic_bool _recursion_stop_requested;
     std::atomic_uint _num_working_threads;
+    std::condition_variable _wake_up_threads;
 
 };
 
