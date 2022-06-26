@@ -70,11 +70,13 @@ public:
 
     class _ThreadSharedContext;
     class _PendingWorkInfo;
+    class _ThreadContext;
     
     void _recurse(
         _ThreadSharedContext * ctx,
         const StackedSimsNode &n,
-        _PendingWorkInfo *workInfo) const;
+        _PendingWorkInfo *workInfo,
+        _ThreadContext * c) const;
 
     class _PendingWorkInfo {
     public:
@@ -125,6 +127,22 @@ public:
         std::mutex x;
         
         std::mutex out_mutex;
+    };
+
+    class _ThreadContext {
+    public:
+        _ThreadContext(
+                _ThreadSharedContext * const shared_ctx,
+                _PendingWorkInfo * const work_info)
+          : shared_ctx(shared_ctx)
+          , work_info(work_info)
+          , was_interrupted(false)
+        {
+        }
+
+        _ThreadSharedContext * const shared_ctx;
+        _PendingWorkInfo * const work_info;
+        bool was_interrupted;
     };
     
     // Enumerate at least n nodes by recursively adding edges to root in a

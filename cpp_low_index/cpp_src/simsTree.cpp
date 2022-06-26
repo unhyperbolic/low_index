@@ -157,11 +157,17 @@ _merge_vectors(
     }
 }
 
+// _recurse(const StackedSimsNode &n,
+//    const std::pair<std::vector<Relator>, std::vector<Relator>> &relators,
+//    std::vector<SimsNode> *result,
+//    _ThreadContext * ctx);
+
 void
 SimsTree::_recurse(
     _ThreadSharedContext * ctx,
     const StackedSimsNode &n,
-    _PendingWorkInfo *work_info) const
+    _PendingWorkInfo *work_info,
+    _ThreadContext * c) const
 {
     if(n.is_complete()) {
         if (n.relators_lift(_long_relators)) {
@@ -193,7 +199,7 @@ SimsTree::_recurse(
                                 work_info->children.push_back(
                                     _PendingWorkInfo(new_subgraph));
                             } else {
-                                _recurse(ctx, new_subgraph, work_info);
+                                _recurse(ctx, new_subgraph, work_info, c);
                             }
                         }
                     }
@@ -241,7 +247,8 @@ SimsTree::_thread_worker_new(
             SimsTree tree(work_info.root, _short_relators, _long_relators);
             tree.was_interrupted = false;
             SimsNodeStack stack(work_info.root);
-            tree._recurse(ctx, stack.get_node(), &work_info);
+            _ThreadContext c(ctx, &work_info);
+            tree._recurse(ctx, stack.get_node(), &work_info, &c);
             if (tree.was_interrupted) {
                 {
                     std::unique_lock<std::mutex> lk(ctx->m);
