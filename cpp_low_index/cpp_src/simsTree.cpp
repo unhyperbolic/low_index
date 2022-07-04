@@ -40,9 +40,14 @@ SimsTree::_recurse(const StackedSimsNode &n)
         return;
     }
 
+    // Find vertex and letter so that no edge labeled by letter starts at the
+    // vertex.
     const std::pair<LetterType, DegreeType> slot = n.first_empty_slot();
     const DegreeType m = std::min<DegreeType>(n.degree() + 1, n.max_degree());
+    // Iterate through vertices where this edge could end.
     for (DegreeType v = 1; v <= m; v++) {
+        // If there is already an edge with the given label ending at v,
+        // we can add an edge to v.
         if (n.act_by(-slot.first, v) != 0) {
             continue;
         }
