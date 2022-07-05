@@ -38,7 +38,7 @@ namespace low_index {
   std::vector<LetterType>::const_iterator Relator::end() const {
     return letters.end();
   }
-  void Relator::insert(const std::vector<LetterType>::const_iterator position,
+  void Relator::insert(std::vector<LetterType>::const_iterator position,
 	      std::vector<LetterType>::const_iterator first,
 	      std::vector<LetterType>::const_iterator last) {
     letters.insert(position, first, last);
