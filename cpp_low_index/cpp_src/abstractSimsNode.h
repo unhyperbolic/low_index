@@ -1,6 +1,7 @@
 #ifndef LOW_INDEX_ABSTRACT_SIMS_NODE_H
 #define LOW_INDEX_ABSTRACT_SIMS_NODE_H
 
+#include "relator.h"
 #include "coveringSubgraph.h"
 
 namespace low_index {

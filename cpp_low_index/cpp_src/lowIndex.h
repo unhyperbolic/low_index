@@ -2,7 +2,7 @@
 #define LOW_INDEX_LOW_INDEX_H
 
 #include "types.h"
-
+#include "relator.h"
 #include <utility>
 #include <string>
 

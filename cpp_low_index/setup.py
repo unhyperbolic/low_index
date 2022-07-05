@@ -9,6 +9,7 @@ sources = [
     "cpp_src/lowIndex.cpp",
     "cpp_src/words.cpp",
     "cpp_src/coveringSubgraph.cpp",
+    "cpp_src/relator.cpp",
     "cpp_src/simsNode.cpp",
     "cpp_src/stackedSimsNode.cpp",
     "cpp_src/abstractSimsNode.cpp",

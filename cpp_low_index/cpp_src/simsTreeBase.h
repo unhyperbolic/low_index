@@ -1,6 +1,7 @@
 #ifndef LOW_INDEX_SIMS_TREE_BASE_H
 #define LOW_INDEX_SIMS_TREE_BASE_H
 
+#include "relator.h"
 #include "simsNode.h"
 
 namespace low_index {

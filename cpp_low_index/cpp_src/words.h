@@ -2,6 +2,7 @@
 #define LOW_INDEX_WORDS_H
 
 #include "types.h"
+#include "relator.h"
 
 #include <string>
 

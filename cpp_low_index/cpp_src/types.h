@@ -21,9 +21,6 @@ using LetterType = std::make_signed<RankType>::type;
 /// Length of a word.
 using RelatorLengthType = uint16_t;
 
-/// A word in a finitely presented group.
-using Relator = std::vector<LetterType>;
-
 }
 
 #endif
