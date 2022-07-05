@@ -47,7 +47,7 @@ than the "long relators", but the low index algorithm tends to perform
 better when the "short relators" are indeed short.
 
 Similarly to CoveringSubgraph, this is an abstract class with
-AbstractSimsNode::_lift_indices and AbstractSimsNode::_lift_vertices
+AbstractSimsNode::_lift_sizes and AbstractSimsNode::_lift_vertices
 being managed by a subclass of AbstractSimsNode.)doc";
 
 static const char *__doc_low_index_AbstractSimsNode_AbstractSimsNode = R"doc()doc";
@@ -60,7 +60,7 @@ static const char *__doc_low_index_AbstractSimsNode_MemoryLayout_MemoryLayout = 
 
 static const char *__doc_low_index_AbstractSimsNode_MemoryLayout_incoming_offset = R"doc()doc";
 
-static const char *__doc_low_index_AbstractSimsNode_MemoryLayout_lift_indices_offset = R"doc()doc";
+static const char *__doc_low_index_AbstractSimsNode_MemoryLayout_lift_sizes_offset = R"doc()doc";
 
 static const char *__doc_low_index_AbstractSimsNode_MemoryLayout_lift_vertices_offset = R"doc()doc";
 
@@ -72,7 +72,7 @@ static const char *__doc_low_index_AbstractSimsNode_copy_memory = R"doc()doc";
 
 static const char *__doc_low_index_AbstractSimsNode_initialize_memory = R"doc()doc";
 
-static const char *__doc_low_index_AbstractSimsNode_lift_indices = R"doc()doc";
+static const char *__doc_low_index_AbstractSimsNode_lift_sizes = R"doc()doc";
 
 static const char *__doc_low_index_AbstractSimsNode_lift_vertices = R"doc()doc";
 

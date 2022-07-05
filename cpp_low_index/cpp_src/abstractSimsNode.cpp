@@ -44,9 +44,9 @@ AbstractSimsNode::_MemoryLayout::_MemoryLayout(
     incoming_offset = t;
     t += node.rank() * node.max_degree() * sizeof(DegreeType);
 
-    // RelatorLengthType *lift_indices;
+    // RelatorLengthType *lift_sizes;
     t = _align<RelatorLengthType>(t);
-    lift_indices_offset = t;
+    lift_sizes_offset = t;
     t += node.num_relators() * node.max_degree() * sizeof(RelatorLengthType);
 
     // DegreeType *lift_vertices;
@@ -68,9 +68,9 @@ AbstractSimsNode::_apply_memory_layout(
     _incoming =
         reinterpret_cast<DegreeType*>(
             memory + layout.incoming_offset);
-    _lift_indices =
+    _lift_sizes =
         reinterpret_cast<RelatorLengthType*>(
-            memory + layout.lift_indices_offset);
+            memory + layout.lift_sizes_offset);
     _lift_vertices =
         reinterpret_cast<DegreeType*>(
             memory + layout.lift_vertices_offset);
@@ -139,7 +139,7 @@ AbstractSimsNode::_relator_may_lift(
     }
     RelatorLengthType next_vertex;
     // Continue lifting the relator where we left of.
-    for (RelatorLengthType i = _lift_indices[j]; true; i++) {
+    for (RelatorLengthType i = _lift_sizes[j]; true; i++) {
         // Result of lifting the edge given by the next letter in
         // the relator.
         next_vertex = act_by(relator[i], vertex);
@@ -153,7 +153,7 @@ AbstractSimsNode::_relator_may_lift(
             // we lift the vertex. Store how far we were able to lift the
             // relator for the next call to _relator_may_lift.
             _lift_vertices[j] = vertex;
-            _lift_indices[j] = i;
+            _lift_sizes[j] = i;
             return true;
         }
         // Move on to the next vertex before looking at the next

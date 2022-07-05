@@ -43,7 +43,7 @@ namespace low_index {
 /// indeed short.
 ///
 /// Similarly to CoveringSubgraph, this is an abstract class
-/// with AbstractSimsNode::_lift_indices and AbstractSimsNode::_lift_vertices
+/// with AbstractSimsNode::_lift_sizes and AbstractSimsNode::_lift_vertices
 /// being managed by a subclass of AbstractSimsNode.
 ///
 class AbstractSimsNode : public CoveringSubgraph
@@ -110,7 +110,7 @@ protected:
         // Offsets for fields.
         static constexpr size_t outgoing_offset = 0;
         size_t incoming_offset;
-        size_t lift_indices_offset;
+        size_t lift_sizes_offset;
         size_t lift_vertices_offset;
 
         // Amount of memory needed to store the graph and acceleration
@@ -160,9 +160,9 @@ protected:
     // For each relator and vertex, store how far the relator could be lifted
     // before hitting a vertex not having an edge (yet) labeled by the next
     // letter in the relator.
-    RelatorLengthType *_lift_indices;
+    RelatorLengthType *_lift_sizes;
     // For each relator and vertex, store the result of lifting the vertex
-    // by the subword of the relator containing _lift_indices letters.
+    // by the subword of the relator containing _lift_sizes letters.
     //
     // Note that the maximum value of DegreeType is reserved to indicate
     // that lifting a vertex by a relator was possible (all necessary edges

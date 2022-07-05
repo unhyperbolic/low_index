@@ -18,7 +18,7 @@ StackedSimsNode::StackedSimsNode(const StackedSimsNode &other)
     // Offset all the pointers to point into the next "stack frame".
     _outgoing = _move_pointer(other._outgoing, other._memory_size);
     _incoming = _move_pointer(other._incoming, other._memory_size);
-    _lift_indices = _move_pointer(other._lift_indices, other._memory_size);
+    _lift_sizes = _move_pointer(other._lift_sizes, other._memory_size);
     _lift_vertices = _move_pointer(other._lift_vertices, other._memory_size);
     // Carry over _memory size.
     _memory_size = other._memory_size;

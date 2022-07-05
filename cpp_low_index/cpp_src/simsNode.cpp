@@ -80,7 +80,7 @@ SimsNode::SimsNode(SimsNode &&other)
     // the other node did.
     _outgoing = other._outgoing;
     _incoming = other._incoming;
-    _lift_indices = other._lift_indices;
+    _lift_sizes = other._lift_sizes;
     _lift_vertices = other._lift_vertices;
     _memory_size = other._memory_size;
 }
