@@ -137,7 +137,7 @@ AbstractSimsNode::_relator_may_lift(
     if (vertex == finished) {
         return true;
     }
-    RelatorLengthType next_vertex;
+    DegreeType next_vertex;
     // Continue lifting the relator where we left of.
     for (RelatorLengthType i = _lift_indices[j]; true; i++) {
         // Result of lifting the edge given by the next letter in
