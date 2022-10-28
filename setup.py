@@ -1,9 +1,6 @@
 import sys
-from setuptools import setup, Extension
-
-# Version 1.1 is used for the cython implemention
-# Version 1.2 is used for the C++/pybind11 implementation
-__version__ = "1.2"
+import shutil
+from setuptools import setup, Command, Extension
 
 sources = [
     "cpp_src/lowIndex.cpp",
@@ -24,7 +21,7 @@ sources = [
 if sys.platform.startswith('win'):
     extra_compile_args = ['/Ox', '/std:c++14']
 else:
-    extra_compile_args = ['-O3', '-std=c++11', '-g']
+    extra_compile_args = ['-O3', '-std=c++11']
 
 ext_modules = [
     Extension(
@@ -33,22 +30,18 @@ ext_modules = [
         extra_compile_args = extra_compile_args)
 ]
 
-
+class Clean(Command):
+    user_options = []
+    def initialize_options(self):
+        pass
+    def finalize_options(self):
+        pass
+    def run(self):
+        for dir in ['build', 'dist', 'low_index.egg-info']:
+            shutil.rmtree(dir, ignore_errors=True)
 setup(
-    # Rename to low_index eventually, replacing the cython implementation
-    name="low_index",
-    version=__version__,
-    author = 'Marc Culler and Nathan M. Dunfield and Matthias Goerner',
-    author_email = 'culler@uic.edu, nathan@dunfield.info, enischte@gmail.com',
-    url="",
-    description="A C++ implementation of Sims LOW INDEX algorithm",
-    long_description="",
     packages = ['low_index'],
     package_dir = {'low_index':'python_src'}, 
     ext_modules=ext_modules,
-#    extras_require={"test": "pytest"},
-    # Currently, build_ext only provides an optional "highest supported C++
-    # level" feature, but in the future it may provide more features.
-    zip_safe=False,
-    python_requires=">=3.6"
+    cmdclass = {'clean':Clean}
 )

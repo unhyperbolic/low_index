@@ -19,8 +19,8 @@ Here is a sample computation:
 
     >>> from low_index import *
     >>>  # Conjugacy classes of subgroups of F_3 with index at most 4: 
-    >>> sgps = SimsTree(rank=3, max_degree=4).list()
-    >>> len(sgps)
+    >>> reps = permutation_reps(rank = 3, short_relators = [], long_relators = [], max_degree = 4)
+    >>> len(reps)
     653
     >>> from snappy import *
     >>> G = Manifold('K11n34').fundamental_group(); G
@@ -30,12 +30,11 @@ Here is a sample computation:
        aaBcbbcAc
        aacAbCBBaCAAbbcBc
     >>> # Degree at most 7 covers of the exterior of the Conway knot:
-    >>> t = SimsTree(G.num_generators(), 7, G.relators(), num_long_relators=1)
-    >>> sgrps = t.list()
-    >>> len(sgps)
+    >>> reps = permutation_reps(G.num_generators(), G.relators()[:1], G.relators()[1:], 7)
+    >>> len(reps)
     52
-    >>> sgps[25].permutation_rep()
-    [[1, 0, 3, 5, 2, 4], [0, 2, 4, 1, 5, 3], [2, 3, 4, 0, 1, 5]]
+    >>> reps[25]
+    [[1, 0, 3, 2, 5, 6, 4], [1, 4, 0, 6, 2, 5, 3], [3, 0, 2, 6, 4, 1, 5]]
 
 
 Credits
