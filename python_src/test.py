@@ -81,12 +81,13 @@ class TestSimsTree(unittest.TestCase):
         self.assertEqual(degrees[7], 0) # Beyond what we counted
 
 class TestPermutationRep(unittest.TestCase):
-    def test_K11n34_7(self):
+    def _test_K11n34_7(self, num_threads):
         reps = permutation_reps(
             3,
             ["aaBcbbcAc"],
             ["aacAbCBBaCAAbbcBc"],
-            7)
+            7,
+            num_threads = num_threads)
 
         degrees = Counter([len(rep[0]) for rep in reps])
         self.assertEqual(degrees[1], 1)
@@ -99,7 +100,16 @@ class TestPermutationRep(unittest.TestCase):
 
         self.assertIn([[0], [0], [0]], reps)
         self.assertIn([[0, 3, 5, 4, 1, 2], [1, 0, 5, 2, 4, 3], [1, 4, 0, 3, 5, 2]], reps)
-        
+
+    def test_K11n34_7_single_threaded(self):
+        self._test_K11n34_7(num_threads = 1)
+
+    def test_K11n34_7_multi_threaded(self):
+        self._test_K11n34_7(num_threads = 0)
+
+    def test_K11n34_7_fixed_multi_threads(self):
+        self._test_K11n34_7(num_threads = 48)
+
     def test_K15n12345_7(self):
         reps = permutation_reps(
             3,
@@ -168,6 +178,8 @@ class TestPermutationRep(unittest.TestCase):
         self._test_o9_03127_9(True)
 
 if __name__ == '__main__':
+    print("Number of cores reported by the operating system:",
+          hardware_concurrency())
     unittest.main()
 
 
