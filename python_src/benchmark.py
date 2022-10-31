@@ -172,6 +172,21 @@ def run(ex, num_threads = 0):
     print('%.3fs'%elapsed)
     sys.stdout.flush()
 
+def run_regina(ex):
+    print('%s; index = %d.'%(ex['group'], ex['index']))
+    if ex['index'] > 7:
+        print("Skipping because regina requires index <= 7")
+        sys.stdout.flush()
+        return
+    start = time.time()
+    G = regina.GroupPresentation(
+        ex['rank'], ex['short relators'] + ex['long relators'])
+    n = len(G.enumerateCovers(ex['index']))
+    elapsed = time.time() - start
+    print('%d subgroups' % n)
+    print('%.3fs'%elapsed)
+    sys.stdout.flush()
+    
 def translate_to_gap(ex, output):
     output.write('info := "%s; index=%d";\n'%(ex['group'], ex['index']))
     all_relators = ex['short relators'] + ex['long relators']
@@ -241,6 +256,10 @@ if __name__ == '__main__':
         print('Running single-threaded')
         for example in examples:
             run(example, num_threads = 1)
+    elif '-regina' in sys.argv:
+        import regina
+        for example in examples:
+            run_regina(example)
     else:
         for example in examples:
             run(example)
