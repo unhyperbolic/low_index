@@ -181,7 +181,9 @@ def run_regina(ex):
     start = time.time()
     G = regina.GroupPresentation(
         ex['rank'], ex['short relators'] + ex['long relators'])
-    n = len(G.enumerateCovers(ex['index']))
+    n = 1
+    for d in range(2, ex['index'] + 1):
+        n += len(G.enumerateCovers(d))
     elapsed = time.time() - start
     print('%d subgroups' % n)
     print('%.3fs'%elapsed)
