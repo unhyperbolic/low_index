@@ -6,6 +6,35 @@
 
 namespace low_index {
 
+bool
+_len_lex_less(const Relator &a, const Relator &b)
+{
+    if (a.size() < b.size()) {
+        return true;
+    }
+    if (a.size() > b.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < a.size(); i++) {
+        const bool aPos = a[i] > 0;
+        const bool bPos = b[i] > 0;
+        const LetterType aAbs = aPos ? a[i] : -a[i];
+        const LetterType bAbs = bPos ? b[i] : -b[i];
+        if (aAbs < bAbs) {
+            return true;
+        }
+        if (aAbs > bAbs) {
+            return false;
+        }
+        if (aPos != bPos) {
+            return aPos;
+        }
+    }
+
+    return false;
+}
+
 /// Parse a word like x1X2
 Relator
 _parse_numeric_word(
@@ -152,7 +181,7 @@ spin_short(const std::vector<Relator> &relators,
     // Remove duplicates from the result.
     // E.g. a periodic relator such as abab will have
     // several identical cyclic shifts.
-    std::sort(result.begin(), result.end());
+    std::sort(result.begin(), result.end(), _len_lex_less);
     auto l = std::unique(result.begin(), result.end());
     result.erase(l, result.end());
 
