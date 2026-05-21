@@ -12,6 +12,13 @@ low_level_multi_threaded = False
 
 examples = [
     {
+        'group' : 'Fundamental group of prism orbifold O333_2 (Gharagozlou, DeBlois, Hoffman)',
+        'rank' : 4,
+        'short relators' : ["aaa", "bbb", "ccc", "dd", "BaBa", "CaCaCa", "CbCbCbCb", "DbDbDb", "DcDc"],
+        'long relators' : [],
+        'index': 14
+    },
+    {
         'group' : 'Fundamental group of K11n34',
         'rank': 3,
         'short relators': ["aaBcbbcAc"],
